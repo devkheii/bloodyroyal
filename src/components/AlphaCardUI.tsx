@@ -8,6 +8,8 @@ interface AlphaCardProps {
   selected?: boolean;
   disabled?: boolean;
   used?: boolean;
+  chargesLeft?: number;
+  cooldownLeft?: number;
   small?: boolean;
   className?: string;
 }
@@ -36,19 +38,22 @@ const getIconForType = (type: string, small: boolean) => {
   }
 };
 
-export const AlphaCardUI: React.FC<AlphaCardProps> = ({ card, onClick, selected, disabled, used, small, className = '' }) => {
+export const AlphaCardUI: React.FC<AlphaCardProps> = ({ card, onClick, selected, disabled, used, chargesLeft, cooldownLeft, small, className = '' }) => {
   const widthClass = small ? 'w-16' : 'w-24 sm:w-32';
   const heightClass = small ? 'h-24' : 'h-32 sm:h-44';
+  const isOutOfCharge = typeof chargesLeft === 'number' && chargesLeft <= 0;
+  const hasCooldown = typeof cooldownLeft === 'number' && cooldownLeft > 0;
+  const isBlocked = !!disabled || !!used || isOutOfCharge || hasCooldown;
   
   return (
     <div 
-      onClick={(disabled || used) ? undefined : onClick}
-      className={`group ${widthClass} ${heightClass} ${className} ${(disabled || used) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+      onClick={isBlocked ? undefined : onClick}
+      className={`group ${widthClass} ${heightClass} ${className} ${isBlocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
     >
       <div className={`relative w-full h-full transition-transform ${selected ? '-translate-y-1' : ''}`} style={{ boxShadow: selected ? '4px 4px 0px #facc15' : '4px 4px 0px #000' }}>
         
         {/* Front */}
-        <div className={`absolute inset-0 bg-purple-900 border-4 ${selected ? 'border-yellow-400' : 'border-black'} flex flex-col items-center justify-center ${used ? 'grayscale' : ''} ${!small && !(disabled || used) ? 'group-hover:opacity-0' : ''} transition-opacity duration-0`}>
+        <div className={`absolute inset-0 bg-purple-900 border-4 ${selected ? 'border-yellow-400' : 'border-black'} flex flex-col items-center justify-center ${used || isOutOfCharge ? 'grayscale' : ''} ${!small && !isBlocked ? 'group-hover:opacity-0' : ''} transition-opacity duration-0`}>
           <div className="text-purple-300 mb-2">
             {getIconForType(card.type, !!small)}
           </div>
@@ -60,9 +65,23 @@ export const AlphaCardUI: React.FC<AlphaCardProps> = ({ card, onClick, selected,
               -{card.hpCost}
             </span>
           )}
-          {used && (
+          {typeof chargesLeft === 'number' && (
+            <span className="absolute -top-3 -left-3 bg-blue-700 text-white text-[10px] px-1 py-0.5 border-2 border-black font-bold" style={{ boxShadow: '2px 2px 0px #000' }}>
+              x{chargesLeft}
+            </span>
+          )}
+          {hasCooldown && (
+            <div className="absolute inset-0 bg-black/65 flex items-center justify-center rounded-lg">
+              <span className="text-yellow-300 font-bold text-[10px] border-2 border-yellow-300 px-1">
+                CD {cooldownLeft}
+              </span>
+            </div>
+          )}
+          {!hasCooldown && (used || isOutOfCharge) && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
-              <span className="text-red-500 font-bold text-[10px] rotate-[-45deg] border-2 border-red-500 px-1">USED</span>
+              <span className="text-red-500 font-bold text-[10px] rotate-[-45deg] border-2 border-red-500 px-1">
+                {isOutOfCharge ? 'EMPTY' : 'USED'}
+              </span>
             </div>
           )}
         </div>

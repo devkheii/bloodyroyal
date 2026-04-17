@@ -40,6 +40,12 @@ export interface AlphaCard {
   isConsumable?: boolean;
 }
 
+export interface AlphaCardUsageRule {
+  chargesPerStage: number;
+  roundCooldown: number;
+  consumeOnUse?: boolean;
+}
+
 export const ALPHA_CARDS: Record<AlphaCardType, Omit<AlphaCard, 'id'>> = {
   PEEK_OPPONENT: { type: 'PEEK_OPPONENT', name: '천리안', description: '상대의 패 1장을 확인합니다. (10 HP 소모)', hpCost: 10, isConsumable: true },
   CHANGE_SUIT: { type: 'CHANGE_SUIT', name: '환영술', description: '내 패 1장의 문양을 바꿉니다. (5 HP 소모)', hpCost: 5 },
@@ -70,6 +76,48 @@ export const ALPHA_CARDS: Record<AlphaCardType, Omit<AlphaCard, 'id'>> = {
   SIXTH_SENSE: { type: 'SIXTH_SENSE', name: '제 6의 감각', description: '바닥에 6번째 커뮤니티 카드를 추가합니다. (30 HP 소모)', hpCost: 30, isConsumable: true },
   THIRD_EYE: { type: 'THIRD_EYE', name: '제 3의 눈', description: '내 손패에 3번째 카드를 추가합니다. (35 HP 소모)', hpCost: 35, isConsumable: true },
 };
+
+const DEFAULT_ALPHA_CARD_USAGE_RULE: AlphaCardUsageRule = {
+  chargesPerStage: 2,
+  roundCooldown: 1,
+};
+
+const ALPHA_CARD_USAGE_OVERRIDES: Partial<Record<AlphaCardType, AlphaCardUsageRule>> = {
+  CHANGE_SUIT: { chargesPerStage: 3, roundCooldown: 1 },
+  PLUS_ONE: { chargesPerStage: 2, roundCooldown: 1 },
+  MINUS_ONE: { chargesPerStage: 2, roundCooldown: 1 },
+  MAKE_SPADE: { chargesPerStage: 2, roundCooldown: 1 },
+  MAKE_HEART: { chargesPerStage: 2, roundCooldown: 1 },
+  MAKE_DIAMOND: { chargesPerStage: 2, roundCooldown: 1 },
+  MAKE_CLOVER: { chargesPerStage: 2, roundCooldown: 1 },
+  LUCKY_SEVEN: { chargesPerStage: 2, roundCooldown: 1 },
+  JOKER: { chargesPerStage: 2, roundCooldown: 1 },
+  PEEK_OPPONENT: { chargesPerStage: 2, roundCooldown: 1 },
+  PEEK_DECK: { chargesPerStage: 2, roundCooldown: 1 },
+  RELOAD: { chargesPerStage: 2, roundCooldown: 1 },
+  VAMPIRE: { chargesPerStage: 2, roundCooldown: 1 },
+  SWAP_HAND: { chargesPerStage: 1, roundCooldown: 2 },
+  GUILLOTINE: { chargesPerStage: 1, roundCooldown: 2 },
+  DOUBLE_POT: { chargesPerStage: 1, roundCooldown: 2 },
+  SHIELD: { chargesPerStage: 1, roundCooldown: 2 },
+  COPY_CARD: { chargesPerStage: 1, roundCooldown: 2 },
+  BLACKHOLE: { chargesPerStage: 1, roundCooldown: 2 },
+  SIXTH_SENSE: { chargesPerStage: 1, roundCooldown: 2 },
+  THIRD_EYE: { chargesPerStage: 1, roundCooldown: 2 },
+  BOSS_EYE: { chargesPerStage: 1, roundCooldown: 2 },
+  BOSS_DEATH: { chargesPerStage: 1, roundCooldown: 2 },
+  BOSS_FATE: { chargesPerStage: 1, roundCooldown: 2 },
+  BOSS_MIRACLE: { chargesPerStage: 1, roundCooldown: 3 },
+  FORCE_FOLD: { chargesPerStage: 1, roundCooldown: 3 },
+  MAX_HP_UP: { chargesPerStage: 1, roundCooldown: 3, consumeOnUse: true },
+  BOSS_GREED: { chargesPerStage: 1, roundCooldown: 3, consumeOnUse: true },
+};
+
+export function getAlphaCardUsageRule(type: AlphaCardType): AlphaCardUsageRule {
+  const override = ALPHA_CARD_USAGE_OVERRIDES[type];
+  if (!override) return { ...DEFAULT_ALPHA_CARD_USAGE_RULE };
+  return { ...override };
+}
 
 export function generateAlphaCard(type: AlphaCardType): AlphaCard {
   return {

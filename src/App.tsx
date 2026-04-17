@@ -86,6 +86,7 @@ export default function App() {
       {engine.gameState.phase === 'CARD_REWARD' && (
         <CardReward 
           rewardCards={engine.rewardCards} 
+          inventoryCards={engine.gameState.inventoryAlphaCards}
           onSelect={engine.handleCardRewardSelect} 
         />
       )}
@@ -124,7 +125,7 @@ export default function App() {
           revealedDeckCards={engine.revealedDeckCards}
           activeAlphaCard={engine.activeAlphaCard}
           selectedHandCardIndex={null}
-          usedAlphaCardIds={engine.usedAlphaCardIds}
+          alphaCardRuntimeById={engine.alphaCardRuntimeById}
           isRoundEnding={engine.isRoundEnding}
           opponentDialogue={engine.opponentDialogue}
           onPlayerAction={engine.handlePlayerAction}

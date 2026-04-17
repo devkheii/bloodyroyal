@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, createDeck, shuffle, evaluateHand, compareHands, formatCard, formatCardDisplay, Rank, Suit, RANKS, SUITS } from '../lib/poker';
-import { GameState, GamePhase, getOpponentMaxHp, getRandomAlphaCard, getRandomAlphaCards, getBossCardForStage, AlphaCard, AlphaCardType, Item, getRandomItems, getMaxItemSlots, getOpponentAction } from '../lib/game';
+import { GameState, GamePhase, getOpponentMaxHp, getRandomAlphaCard, getRandomAlphaCards, getBossCardForStage, AlphaCard, AlphaCardType, Item, getRandomItems, getMaxItemSlots, getOpponentAction, getAlphaCardUsageRule } from '../lib/game';
 import { saveScore, getScores, ScoreEntry } from '../lib/api';
 import { HAND_NAMES_KO, INITIAL_HP, MAX_PLAYER_HP_LIMIT, HP_PER_STAGE } from '../constants';
 import { getEnemyForStage } from '../lib/enemies';
 import { dealNewRound } from '../lib/dealHands';
-import { ALPHA_CARD_EFFECTS, needsTarget, applyTargetedEffect, EffectContext } from '../lib/alphaCardEffects';
+import { ALPHA_CARD_EFFECTS, applyTargetedEffect, EffectContext } from '../lib/alphaCardEffects';
 
 export interface UseGameEngine {
   // State
@@ -17,7 +17,7 @@ export interface UseGameEngine {
   revealedDeckCards: Card[];
   roundResultText: string | null;
   damageEffect: 'PLAYER' | 'OPPONENT' | null;
-  usedAlphaCardIds: Set<string>;
+  alphaCardRuntimeById: Record<string, { remainingCharges: number; cooldown: number }>;
   isRoundEnding: boolean;
   opponentDialogue: string | null;
   playerName: string;
@@ -53,6 +53,71 @@ export interface UseGameEngine {
   // Helpers
   getMaxEquipSlots: (stage: number) => number;
   getBgUrl: (stage: number) => string;
+}
+
+function clampChance(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getAllInCallChance(
+  stage: number,
+  opponentRank: number,
+  opponentHp: number,
+  callCost: number,
+  potBeforeOpponentCall: number
+): number {
+  const stageBase =
+    stage <= 10 ? 0.52 :
+    stage <= 20 ? 0.50 :
+    stage <= 30 ? 0.42 :
+    stage <= 40 ? 0.56 : 0.72;
+
+  // pokersolver rank: High Card=1 ... Royal Flush=10
+  const handBonus =
+    opponentRank <= 1 ? -0.20 :
+    opponentRank === 2 ? -0.06 :
+    opponentRank === 3 ? 0.02 :
+    opponentRank === 4 ? 0.10 :
+    opponentRank === 5 ? 0.16 :
+    opponentRank === 6 ? 0.20 :
+    0.24;
+
+  const riskRatio = callCost / Math.max(1, opponentHp);
+  // Early stages should not over-fold all-ins even when chip/HP pressure is high.
+  const hpRiskPenalty =
+    stage <= 10
+      ? (riskRatio >= 1 ? 0.16 : riskRatio * 0.10)
+      : (riskRatio >= 1 ? 0.35 : riskRatio * 0.25);
+
+  // Lower required equity (pot odds) should increase call tendency.
+  const callOdds = callCost / Math.max(1, potBeforeOpponentCall + callCost);
+  const potOddsBonus = (0.5 - callOdds) * 0.5;
+
+  const stageFloor =
+    stage <= 10 ? 0.45 :
+    stage <= 20 ? 0.35 :
+    stage <= 30 ? 0.30 :
+    stage <= 40 ? 0.45 : 0.58;
+
+  const rawChance = stageBase + handBonus + potOddsBonus - hpRiskPenalty;
+  return clampChance(rawChance, stageFloor, 0.98);
+}
+
+interface AlphaCardRuntime {
+  remainingCharges: number;
+  cooldown: number;
+}
+
+function createAlphaCardRuntime(cards: AlphaCard[]): Record<string, AlphaCardRuntime> {
+  const runtime: Record<string, AlphaCardRuntime> = {};
+  cards.forEach(card => {
+    const rule = getAlphaCardUsageRule(card.type);
+    runtime[card.id] = {
+      remainingCharges: rule.chargesPerStage,
+      cooldown: 0,
+    };
+  });
+  return runtime;
 }
 
 export function useGameEngine(): UseGameEngine {
@@ -93,7 +158,7 @@ export function useGameEngine(): UseGameEngine {
   const [playerName, setPlayerName] = useState<string>('');
   const [leaderboard, setLeaderboard] = useState<ScoreEntry[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [usedAlphaCardIds, setUsedAlphaCardIds] = useState<Set<string>>(new Set());
+  const [alphaCardRuntimeById, setAlphaCardRuntimeById] = useState<Record<string, AlphaCardRuntime>>({});
   const [isRoundEnding, setIsRoundEnding] = useState(false);
   const [opponentDialogue, setOpponentDialogue] = useState<string | null>(null);
 
@@ -128,6 +193,7 @@ export function useGameEngine(): UseGameEngine {
     setActiveAlphaCard(null);
 
     const current = gameStateRef.current;
+    const shouldTickCooldown = ['FLOP', 'TURN', 'RIVER', 'SHOWDOWN'].includes(current.phase);
     const enemy = getEnemyForStage(current.stage);
     if (winner === 'PLAYER') {
       setOpponentDialogue(enemy.dialogues.lose);
@@ -148,8 +214,19 @@ export function useGameEngine(): UseGameEngine {
       setDamageEffect(null);
       setRoundResultText(null);
       setRevealedDeckCards([]);
-      setUsedAlphaCardIds(new Set());
       setOpponentDialogue(getEnemyForStage(gameStateRef.current.stage).dialogues.intro);
+      if (shouldTickCooldown) {
+        setAlphaCardRuntimeById(prev => {
+          const next: Record<string, AlphaCardRuntime> = {};
+          (Object.entries(prev) as [string, AlphaCardRuntime][]).forEach(([id, state]) => {
+            next[id] = {
+              ...state,
+              cooldown: Math.max(0, state.cooldown - 1),
+            };
+          });
+          return next;
+        });
+      }
 
       setGameState(prev => {
         let nextPlayerHp = prev.playerHp;
@@ -342,13 +419,12 @@ export function useGameEngine(): UseGameEngine {
     }));
     setSelectedInventoryCards([]);
     setSelectedInventoryItems([]);
+    setAlphaCardRuntimeById({});
   }, []);
 
   // ========== startStage ==========
   const startStage = useCallback(() => {
     const { deck, playerHand, opponentHand } = dealNewRound(gameStateRef.current.stage);
-    
-    setUsedAlphaCardIds(new Set());
     
     const enemy = getEnemyForStage(gameStateRef.current.stage);
     setOpponentDialogue(enemy.dialogues.intro);
@@ -509,16 +585,59 @@ export function useGameEngine(): UseGameEngine {
         nextPlayerInvested += cost;
         nextPot += cost;
         newLogs.push(`올인!! 남은 모든 체력(${cost} HP)을 걸었습니다!`);
-        
+
         const opponentEval = evaluateHand(prev.opponentHand, prev.communityCards);
-        const strength = opponentEval.value;
-        
-        let callChance = 0.1;
-        if (strength >= 1) callChance = 0.7;
-        if (strength >= 2) callChance = 0.9;
-        if (strength >= 3) callChance = 1.0;
-        
-        if (Math.random() < callChance) {
+        const opponentRank = opponentEval.rank ?? 1;
+        const callChance = getAllInCallChance(
+          prev.stage,
+          opponentRank,
+          prev.opponentHp,
+          cost,
+          nextPot
+        );
+
+        let willCallAllIn = Math.random() < callChance;
+        const isBoardComplete = prev.communityCards.length >= 5;
+
+        // If all community cards are already revealed, prevent paradoxical folds:
+        // when opponent is tie/win on known board, they must call.
+        if (isBoardComplete) {
+          try {
+            const playerKnownEval = evaluateHand(prev.playerHand, prev.communityCards);
+            const opponentKnownEval = evaluateHand(prev.opponentHand, prev.communityCards);
+            const knownResult = compareHands(playerKnownEval, opponentKnownEval);
+            if (knownResult <= 0) {
+              willCallAllIn = true;
+            }
+          } catch (e) {
+            // Fail-safe: avoid impossible-looking fold outcomes when evaluation fails.
+            willCallAllIn = true;
+            console.error('ALL_IN known-board evaluation error:', e);
+          }
+        } else if (!willCallAllIn) {
+          // Guard against paradoxical folds: if the deterministic final board would
+          // make opponent tie/win, force a call instead of folding.
+          const simDeck = [...prev.deck];
+          const simCommunity = [...prev.communityCards];
+          while (simCommunity.length < 5 && simDeck.length > 0) {
+            simCommunity.push(simDeck.pop()!);
+          }
+
+          try {
+            const playerSimEval = evaluateHand(prev.playerHand, simCommunity);
+            const opponentSimEval = evaluateHand(prev.opponentHand, simCommunity);
+            const simResult = compareHands(playerSimEval, opponentSimEval);
+            if (simResult <= 0) {
+              willCallAllIn = true;
+            }
+          } catch (e) {
+            // Fail-safe: if forecast is broken, choose call over contradictory fold.
+            willCallAllIn = true;
+            console.error('ALL_IN forecast simulation error:', e);
+          }
+        }
+
+        if (willCallAllIn) {
           nextPot += cost;
           newLogs.push(`상대가 올인을 받아들였습니다! (쇼다운 진행)`);
           forceShowdown = true;
@@ -718,8 +837,9 @@ export function useGameEngine(): UseGameEngine {
         logs: [`보스를 처치하고 특수 조커를 획득했습니다!`],
       }));
     } else if (isRewardStage) {
-      const ownedTypes = current.inventoryAlphaCards.map(c => c.type);
-      const cards = getRandomAlphaCards(3, ownedTypes);
+      // Duplicate policy (Option A): keep duplicates.
+      // Reward generation no longer excludes already owned card types.
+      const cards = getRandomAlphaCards(3);
       setRewardCards(cards);
       setGameState(prev => ({
         ...prev,
@@ -754,12 +874,11 @@ export function useGameEngine(): UseGameEngine {
 
   // ========== handleRevive ==========
   const handleRevive = useCallback(() => {
+    setAlphaCardRuntimeById(createAlphaCardRuntime(gameStateRef.current.equippedAlphaCards));
     setGameState(prev => {
       const nextDifficulty = prev.difficultyMultiplier + 0.5;
       const nextPlayerHp = prev.maxPlayerHp; // Full heal
-      
-      setUsedAlphaCardIds(new Set());
-      
+
       setTimeout(() => {
         setOpponentDialogue(getEnemyForStage(prev.stage).dialogues.intro);
       }, 0);
@@ -856,8 +975,19 @@ export function useGameEngine(): UseGameEngine {
     const current = gameStateRef.current;
     if (isRoundEnding || current.phase === 'SHOWDOWN') return;
     if (activeAlphaCard) return;
-    if (usedAlphaCardIds.has(card.id)) {
-      addLog('이미 이번 라운드에 사용한 카드입니다.');
+
+    const usageRule = getAlphaCardUsageRule(card.type);
+    const runtime = alphaCardRuntimeById[card.id] ?? {
+      remainingCharges: usageRule.chargesPerStage,
+      cooldown: 0,
+    };
+
+    if (runtime.remainingCharges <= 0) {
+      addLog(`${card.name}의 이번 스테이지 충전이 모두 소진되었습니다.`);
+      return;
+    }
+    if (runtime.cooldown > 0) {
+      addLog(`${card.name}은(는) ${runtime.cooldown}라운드 후 다시 사용할 수 있습니다.`);
       return;
     }
 
@@ -875,31 +1005,43 @@ export function useGameEngine(): UseGameEngine {
       addLog(`${card.name} 사용을 위해 ${card.hpCost} HP를 지불했습니다.`);
     }
 
-    // 타겟 선택이 필요한 카드
-    if (needsTarget(card.type)) {
-      setActiveAlphaCard(card);
-      addLog(`${card.name} 효과를 적용할 내 패를 선택하세요.`);
-      return;
-    }
-
-    // 즉시 효과 카드
-    if (card.isConsumable) {
-      const effectCtx: EffectContext = {
-        gameState: gameStateRef.current,
-        setGameState,
-        addLog,
-        setDamageEffect,
-        handleRoundEnd,
-        setRevealedDeckCards,
+    setAlphaCardRuntimeById(prev => {
+      const currentRuntime = prev[card.id] ?? {
+        remainingCharges: usageRule.chargesPerStage,
+        cooldown: 0,
       };
-      ALPHA_CARD_EFFECTS[card.type](card, effectCtx);
-    } else {
+      return {
+        ...prev,
+        [card.id]: {
+          remainingCharges: Math.max(0, currentRuntime.remainingCharges - 1),
+          cooldown: usageRule.roundCooldown,
+        },
+      };
+    });
+
+    if (usageRule.consumeOnUse) {
+      setGameState(prev => ({
+        ...prev,
+        equippedAlphaCards: prev.equippedAlphaCards.filter(c => c.id !== card.id),
+        inventoryAlphaCards: prev.inventoryAlphaCards.filter(c => c.id !== card.id),
+      }));
+      addLog(`${card.name}은(는) 사용 후 소멸했습니다.`);
+    }
+
+    const effectCtx: EffectContext = {
+      gameState: gameStateRef.current,
+      setGameState,
+      addLog,
+      setDamageEffect,
+      handleRoundEnd,
+      setRevealedDeckCards,
+    };
+    const effectResult = ALPHA_CARD_EFFECTS[card.type](card, effectCtx);
+    if (effectResult === 'NEED_TARGET') {
       setActiveAlphaCard(card);
       addLog(`${card.name} 효과를 적용할 내 패를 선택하세요.`);
     }
-
-    setUsedAlphaCardIds(prev => new Set(prev).add(card.id));
-  }, [isRoundEnding, activeAlphaCard, usedAlphaCardIds, addLog, handleRoundEnd]);
+  }, [isRoundEnding, activeAlphaCard, alphaCardRuntimeById, addLog, handleRoundEnd]);
 
   // ========== handleHandCardClick ==========
   const handleHandCardClick = useCallback((index: number) => {
@@ -925,9 +1067,6 @@ export function useGameEngine(): UseGameEngine {
       return {
         ...prev,
         playerHand: newHand,
-        equippedAlphaCards: activeAlphaCard.isConsumable
-          ? prev.equippedAlphaCards.filter(c => c.id !== activeAlphaCard.id)
-          : prev.equippedAlphaCards,
       };
     });
     setActiveAlphaCard(null);
@@ -940,18 +1079,19 @@ export function useGameEngine(): UseGameEngine {
     const goToShop = justClearedStage > 0 && justClearedStage % 5 === 0;
 
     setGameState(prev => {
-      // 인벤토리 상한 3장: 3장이면 덱빌딩에서 교체해야 함 (여기서는 일단 추가)
+      // 보상 카드는 소멸하지 않고 모두 인벤토리에 누적
+      const duplicateCount = prev.inventoryAlphaCards.filter(c => c.type === card.type).length;
       const nextInv = [...prev.inventoryAlphaCards, card];
-      if (nextInv.length > 3) {
-         // UI에서 교체 팝업이 없다면, 일단 가장 오래된 카드를 강제 버림
-         nextInv.shift();
-      }
+      const duplicateLog =
+        duplicateCount > 0
+          ? ` (중복 ${duplicateCount + 1}장째 보유)`
+          : '';
       return {
         ...prev,
         phase: (goToShop ? 'SHOP' : 'DECKBUILDING') as GamePhase,
         inventoryAlphaCards: nextInv,
         shopItems: goToShop ? getRandomItems(3) : [],
-        logs: [...prev.logs, `${card.name} 획득.${nextInv.length >= 3 ? ' (인벤토리가 꽉 찼습니다)' : ''}${goToShop ? ' 상점에 입장합니다.' : ' 덱을 구성하세요.'}`].slice(-5)
+        logs: [...prev.logs, `${card.name} 획득${duplicateLog}.${goToShop ? ' 상점에 입장합니다.' : ' 덱을 구성하세요.'}`].slice(-5)
       };
     });
   }, []);
@@ -974,6 +1114,7 @@ export function useGameEngine(): UseGameEngine {
   }, []);
 
   const handleStartStageFromDeckbuilding = useCallback((toEquipCards: AlphaCard[], toEquipItems: Item[]) => {
+    setAlphaCardRuntimeById(createAlphaCardRuntime(toEquipCards));
     setGameState(prev => ({
       ...prev,
       equippedAlphaCards: toEquipCards,
@@ -996,7 +1137,7 @@ export function useGameEngine(): UseGameEngine {
     revealedDeckCards,
     roundResultText,
     damageEffect,
-    usedAlphaCardIds,
+    alphaCardRuntimeById,
     isRoundEnding,
     opponentDialogue,
     playerName,

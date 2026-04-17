@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { GameState } from '../../lib/game';
 import { AlphaCardUI } from '../AlphaCardUI';
 
@@ -23,6 +23,31 @@ export const Deckbuilding: React.FC<DeckbuildingProps> = ({
   getMaxItemSlots,
   onStartStage,
 }) => {
+  const [cardFilter, setCardFilter] = useState<'ALL' | 'BOSS' | 'CONSUMABLE' | 'PERSISTENT'>('ALL');
+  const [cardSort, setCardSort] = useState<'RECENT' | 'NAME' | 'COST_ASC' | 'COST_DESC'>('RECENT');
+
+  const filteredSortedCards = useMemo(() => {
+    const filtered = gameState.inventoryAlphaCards.filter(card => {
+      if (cardFilter === 'BOSS') return !!card.isBossCard;
+      if (cardFilter === 'CONSUMABLE') return !!card.isConsumable;
+      if (cardFilter === 'PERSISTENT') return !card.isConsumable;
+      return true;
+    });
+
+    const cards = [...filtered];
+    if (cardSort === 'NAME') {
+      cards.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (cardSort === 'COST_ASC') {
+      cards.sort((a, b) => (a.hpCost ?? 0) - (b.hpCost ?? 0));
+    } else if (cardSort === 'COST_DESC') {
+      cards.sort((a, b) => (b.hpCost ?? 0) - (a.hpCost ?? 0));
+    } else {
+      // Keep acquisition order by default (most recently acquired last)
+    }
+
+    return cards;
+  }, [gameState.inventoryAlphaCards, cardFilter, cardSort]);
+
   return (
     <div className="flex-grow flex flex-col space-y-6">
       <h2 className="text-xl text-center text-purple-400">덱 및 아이템 구성</h2>
@@ -31,9 +56,34 @@ export const Deckbuilding: React.FC<DeckbuildingProps> = ({
         <br/>
         패시브 아이템은 최대 {getMaxItemSlots(gameState.stage)}개 장착 가능합니다.
       </p>
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-center text-xs">
+        <div className="text-gray-300 text-center sm:text-left">보유 조커: {gameState.inventoryAlphaCards.length}장</div>
+        <div className="flex gap-2 justify-center">
+          <select
+            value={cardFilter}
+            onChange={e => setCardFilter(e.target.value as 'ALL' | 'BOSS' | 'CONSUMABLE' | 'PERSISTENT')}
+            className="bg-gray-900 border border-gray-700 px-2 py-1 rounded text-gray-200"
+          >
+            <option value="ALL">전체</option>
+            <option value="BOSS">보스</option>
+            <option value="CONSUMABLE">소모형</option>
+            <option value="PERSISTENT">지속형</option>
+          </select>
+          <select
+            value={cardSort}
+            onChange={e => setCardSort(e.target.value as 'RECENT' | 'NAME' | 'COST_ASC' | 'COST_DESC')}
+            className="bg-gray-900 border border-gray-700 px-2 py-1 rounded text-gray-200"
+          >
+            <option value="RECENT">획득순</option>
+            <option value="NAME">이름순</option>
+            <option value="COST_ASC">코스트↑</option>
+            <option value="COST_DESC">코스트↓</option>
+          </select>
+        </div>
+      </div>
       
       <div className="flex flex-wrap gap-4 justify-center">
-        {gameState.inventoryAlphaCards.map(card => (
+        {filteredSortedCards.map(card => (
           <AlphaCardUI 
             key={card.id} 
             card={card} 

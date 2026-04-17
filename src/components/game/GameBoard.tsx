@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GameState, AlphaCard } from '../../lib/game';
+import { GameState, AlphaCard, getAlphaCardUsageRule } from '../../lib/game';
 import { Card, getBestHandCards, formatCard, HAND_NAMES_KO, evaluateHand } from '../../lib/poker';
 import { PlayingCard } from '../PlayingCard';
 import { AlphaCardUI } from '../AlphaCardUI';
@@ -12,7 +12,7 @@ interface GameBoardProps {
   revealedDeckCards: Card[];
   activeAlphaCard: AlphaCard | null;
   selectedHandCardIndex: number | null;
-  usedAlphaCardIds: Set<string>;
+  alphaCardRuntimeById: Record<string, { remainingCharges: number; cooldown: number }>;
   isRoundEnding: boolean;
   opponentDialogue: string | null;
   onPlayerAction: (action: 'FOLD' | 'CALL' | 'RAISE' | 'ALL_IN') => void;
@@ -25,7 +25,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   revealedDeckCards,
   activeAlphaCard,
   selectedHandCardIndex,
-  usedAlphaCardIds,
+  alphaCardRuntimeById,
   isRoundEnding,
   opponentDialogue,
   onPlayerAction,
@@ -176,15 +176,24 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         <div className="flex flex-col items-center gap-2 w-full mt-4">
           {/* Jokers */}
           <div className="flex gap-2 pb-2 pt-4 px-2 w-full justify-center">
-            {gameState.equippedAlphaCards.map((card) => (
-              <AlphaCardUI 
-                key={card.id} 
-                card={card} 
-                small 
-                used={usedAlphaCardIds.has(card.id)}
-                onClick={() => onUseAlphaCard(card)}
-              />
-            ))}
+            {gameState.equippedAlphaCards.map((card) => {
+              const runtime = alphaCardRuntimeById[card.id] ?? {
+                remainingCharges: getAlphaCardUsageRule(card.type).chargesPerStage,
+                cooldown: 0,
+              };
+              return (
+                <AlphaCardUI
+                  key={card.id}
+                  card={card}
+                  small
+                  used={runtime.remainingCharges <= 0}
+                  disabled={runtime.cooldown > 0 || isRoundEnding || !!activeAlphaCard}
+                  chargesLeft={runtime.remainingCharges}
+                  cooldownLeft={runtime.cooldown}
+                  onClick={() => onUseAlphaCard(card)}
+                />
+              );
+            })}
           </div>
 
           {/* Equipped Items */}

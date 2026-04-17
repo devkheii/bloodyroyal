@@ -22,10 +22,11 @@ export interface EffectContext {
 type AlphaCardEffect = (card: AlphaCard, ctx: EffectContext) => void | 'NEED_TARGET';
 
 /**
- * 장착 해제 헬퍼: 소모성 카드면 장착 목록에서 제거
+ * 스킬 시스템 전환:
+ * 카드 소모 여부는 엔진의 usage rule(consumeOnUse)에서 일괄 처리한다.
  */
-function removeIfConsumable(card: AlphaCard, equipped: AlphaCard[]): AlphaCard[] {
-  return card.isConsumable ? equipped.filter(c => c.id !== card.id) : equipped;
+function removeIfConsumable(_card: AlphaCard, equipped: AlphaCard[]): AlphaCard[] {
+  return equipped;
 }
 
 /**
@@ -121,10 +122,9 @@ export const ALPHA_CARD_EFFECTS: Record<AlphaCardType, AlphaCardEffect> = {
       ...prev,
       maxPlayerHp: Math.min(MAX_PLAYER_HP_LIMIT, prev.maxPlayerHp + 30),
       playerHp: Math.min(MAX_PLAYER_HP_LIMIT, prev.playerHp + 30),
-      equippedAlphaCards: prev.equippedAlphaCards.filter(c => c.id !== card.id),
-      inventoryAlphaCards: prev.inventoryAlphaCards.filter(c => c.id !== card.id),
+      equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
     }));
-    ctx.addLog(`${card.name} 사용: 최대 HP +30 및 회복! (1회용 카드 소멸)`);
+    ctx.addLog(`${card.name} 사용: 최대 HP +30 및 회복!`);
   },
 
   BOSS_EYE: (card, ctx) => {
@@ -150,10 +150,9 @@ export const ALPHA_CARD_EFFECTS: Record<AlphaCardType, AlphaCardEffect> = {
       ...prev,
       maxPlayerHp: Math.min(MAX_PLAYER_HP_LIMIT, prev.maxPlayerHp + 50),
       playerHp: Math.min(MAX_PLAYER_HP_LIMIT, prev.playerHp + 50),
-      equippedAlphaCards: prev.equippedAlphaCards.filter(c => c.id !== card.id),
-      inventoryAlphaCards: prev.inventoryAlphaCards.filter(c => c.id !== card.id),
+      equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
     }));
-    ctx.addLog(`${card.name} 사용: 최대 체력이 50 증가하고 회복했습니다! (1회용 카드 소멸)`);
+    ctx.addLog(`${card.name} 사용: 최대 체력이 50 증가하고 회복했습니다!`);
   },
 
   BOSS_DEATH: (card, ctx) => {

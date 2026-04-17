@@ -2,7 +2,8 @@ import { Card, createDeck, shuffle, RANKS, SUITS, Rank, Suit } from './poker';
 
 /**
  * 적 핸드를 생성합니다.
- * Stage 11+ 부터 포켓 페어 보정 확률이 적용됩니다.
+ * 스테이지 구간별 포켓 페어 보정 확률:
+ * 1-10: 5%, 11-20: 10%, 21-30: 20%, 31-40: 30%, 41-50+: 40%
  * 
  * @param deck 현재 덱 (변경됨 — 새 덱이 반환됨)
  * @param stage 현재 스테이지
@@ -15,8 +16,13 @@ export function dealOpponentHand(
   playerHand?: Card[]
 ): { opponentHand: Card[]; remainingDeck: Card[] } {
   let remainingDeck = [...deck];
+  const pocketPairChance =
+    stage <= 10 ? 0.05 :
+    stage <= 20 ? 0.10 :
+    stage <= 30 ? 0.20 :
+    stage <= 40 ? 0.30 : 0.40;
 
-  if (stage > 10 && Math.random() < (stage * 0.015)) {
+  if (Math.random() < pocketPairChance) {
     // 포켓 페어 생성 — 플레이어 손패와 중복 방지
     const playerRanks = playerHand ? playerHand.map(c => c.rank) : [];
     const availableRanks = RANKS.filter(r => !playerRanks.includes(r));
