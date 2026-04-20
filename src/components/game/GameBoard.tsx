@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GameState, AlphaCard, getAlphaCardUsageRule } from '../../lib/game';
+import { GameState, AlphaCard, getAlphaCardUsageRuleByLevel } from '../../lib/game';
 import { Card, getBestHandCards, formatCard, HAND_NAMES_KO, evaluateHand } from '../../lib/poker';
 import { PlayingCard } from '../PlayingCard';
 import { AlphaCardUI } from '../AlphaCardUI';
@@ -13,6 +13,8 @@ interface GameBoardProps {
   activeAlphaCard: AlphaCard | null;
   selectedHandCardIndex: number | null;
   alphaCardRuntimeById: Record<string, { remainingCharges: number; cooldown: number }>;
+  allInReadHint: string | null;
+  opponentCheatWarning: string | null;
   isRoundEnding: boolean;
   opponentDialogue: string | null;
   onPlayerAction: (action: 'FOLD' | 'CALL' | 'RAISE' | 'ALL_IN') => void;
@@ -26,6 +28,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   activeAlphaCard,
   selectedHandCardIndex,
   alphaCardRuntimeById,
+  allInReadHint,
+  opponentCheatWarning,
   isRoundEnding,
   opponentDialogue,
   onPlayerAction,
@@ -128,6 +132,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             </div>
           )
         )}
+        {opponentCheatWarning && (
+          <div className="mt-2 px-2 py-1 text-[10px] sm:text-xs font-bold text-black bg-yellow-300 border-2 border-black animate-pulse">
+            {opponentCheatWarning}
+          </div>
+        )}
       </div>
 
       {/* Table Area */}
@@ -178,7 +187,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           <div className="flex gap-2 pb-2 pt-4 px-2 w-full justify-center">
             {gameState.equippedAlphaCards.map((card) => {
               const runtime = alphaCardRuntimeById[card.id] ?? {
-                remainingCharges: getAlphaCardUsageRule(card.type).chargesPerStage,
+                remainingCharges: getAlphaCardUsageRuleByLevel(card.type, card.level ?? 1).chargesPerStage,
                 cooldown: 0,
               };
               return (
@@ -232,7 +241,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
           {/* Controls */}
           {['PREFLOP', 'FLOP', 'TURN', 'RIVER'].includes(gameState.phase) && (
-            <div className="flex gap-2 items-center w-full justify-center flex-wrap pt-4">
+            <div className="flex flex-col gap-2 items-center w-full justify-center flex-wrap pt-4">
+              {allInReadHint && (
+                <div className="text-[10px] sm:text-xs text-yellow-300 font-bold bg-black/40 border border-yellow-600 px-2 py-1 rounded">
+                  {allInReadHint}
+                </div>
+              )}
+              <div className="flex gap-2 items-center w-full justify-center flex-wrap">
               {gameState.playerHp > 0 ? (
                 <>
                   <button 
@@ -278,6 +293,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   ALL-IN
                 </button>
               )}
+              </div>
             </div>
           )}
         </div>

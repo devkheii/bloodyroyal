@@ -15,7 +15,7 @@ export const CardReward: React.FC<CardRewardProps> = ({ rewardCards, inventoryCa
     <div className="flex-grow flex flex-col space-y-6 items-center justify-center">
       <h2 className="text-2xl text-center text-purple-400">보상을 선택하세요</h2>
       <p className="text-center text-sm text-gray-400 mb-8">
-        인벤토리에 추가할 조커를 1장 선택하세요. 중복 카드는 그대로 누적 보관됩니다.
+        인벤토리에 추가할 조커를 1장 선택하세요. 중복 카드는 기존 카드 강화로 전환됩니다.
       </p>
       
       <div className="flex flex-wrap gap-6 justify-center">

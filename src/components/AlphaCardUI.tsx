@@ -41,6 +41,7 @@ const getIconForType = (type: string, small: boolean) => {
 export const AlphaCardUI: React.FC<AlphaCardProps> = ({ card, onClick, selected, disabled, used, chargesLeft, cooldownLeft, small, className = '' }) => {
   const widthClass = small ? 'w-16' : 'w-24 sm:w-32';
   const heightClass = small ? 'h-24' : 'h-32 sm:h-44';
+  const cardLevel = card.level ?? 1;
   const isOutOfCharge = typeof chargesLeft === 'number' && chargesLeft <= 0;
   const hasCooldown = typeof cooldownLeft === 'number' && cooldownLeft > 0;
   const isBlocked = !!disabled || !!used || isOutOfCharge || hasCooldown;
@@ -60,6 +61,7 @@ export const AlphaCardUI: React.FC<AlphaCardProps> = ({ card, onClick, selected,
           <span className={`${small ? 'text-[8px]' : 'text-[10px] sm:text-xs'} text-purple-200 font-bold text-center px-1 leading-tight`}>
             {card.name}
           </span>
+          <span className="mt-1 text-[9px] text-yellow-300 font-bold">Lv.{cardLevel}</span>
           {card.hpCost && (
             <span className="absolute -top-3 -right-3 bg-red-600 text-white text-[10px] px-1 py-0.5 border-2 border-black font-bold" style={{ boxShadow: '2px 2px 0px #000' }}>
               -{card.hpCost}
@@ -89,7 +91,7 @@ export const AlphaCardUI: React.FC<AlphaCardProps> = ({ card, onClick, selected,
         {/* Back / Tooltip */}
         <div className={`absolute ${small ? 'bottom-full left-1/2 -translate-x-1/2 mb-4 w-48 shadow-[8px_8px_0px_#000]' : 'inset-0'} bg-black border-4 ${small ? 'border-white z-50' : 'border-black z-10'} p-2 flex flex-col items-center justify-center text-center opacity-0 group-hover:opacity-100 transition-opacity duration-0 pointer-events-none`}>
           <div className={`${small ? 'text-xs' : 'text-xs sm:text-sm'} text-yellow-300 mb-1 border-b-2 border-gray-600 w-full pb-1 font-bold`}>
-            {card.name}
+            {card.name} (Lv.{cardLevel})
           </div>
           <span className={`${small ? 'text-[10px]' : 'text-[10px] sm:text-[12px]'} text-gray-200 leading-relaxed flex-grow flex items-center justify-center`}>
             {card.description}

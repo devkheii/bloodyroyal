@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, createDeck, shuffle, evaluateHand, compareHands, formatCard, formatCardDisplay, Rank, Suit, RANKS, SUITS } from '../lib/poker';
-import { GameState, GamePhase, getOpponentMaxHp, getRandomAlphaCard, getRandomAlphaCards, getBossCardForStage, AlphaCard, AlphaCardType, Item, getRandomItems, getMaxItemSlots, getOpponentAction, getAlphaCardUsageRule } from '../lib/game';
+import { GameState, GamePhase, getOpponentMaxHp, getRandomAlphaCard, getRandomAlphaCards, getBossCardForStage, AlphaCard, AlphaCardType, Item, getRandomItems, getMaxItemSlots, getOpponentAction, getAlphaCardUsageRuleByLevel, getAlphaCardMaxLevel } from '../lib/game';
 import { saveScore, getScores, ScoreEntry } from '../lib/api';
 import { HAND_NAMES_KO, INITIAL_HP, MAX_PLAYER_HP_LIMIT, HP_PER_STAGE } from '../constants';
 import { getEnemyForStage } from '../lib/enemies';
@@ -18,6 +18,8 @@ export interface UseGameEngine {
   roundResultText: string | null;
   damageEffect: 'PLAYER' | 'OPPONENT' | null;
   alphaCardRuntimeById: Record<string, { remainingCharges: number; cooldown: number }>;
+  allInReadHint: string | null;
+  opponentCheatWarning: string | null;
   isRoundEnding: boolean;
   opponentDialogue: string | null;
   playerName: string;
@@ -103,6 +105,49 @@ function getAllInCallChance(
   return clampChance(rawChance, stageFloor, 0.98);
 }
 
+function getAllInReadHint(callChance: number): string {
+  if (callChance >= 0.75) return '강공 성향 (콜 가능성 높음)';
+  if (callChance >= 0.55) return '균형 성향 (콜/폴드 혼합)';
+  return '신중 성향 (폴드 경향)';
+}
+
+function drawCommunityCardWithStageBias(
+  deck: Card[],
+  communityCards: Card[],
+  stage: number
+): { nextDeck: Card[]; card: Card | null } {
+  const nextDeck = [...deck];
+  if (nextDeck.length === 0) return { nextDeck, card: null };
+
+  // Early-stage smoothing: avoid creating a board-only Straight+ on river.
+  const isEarlyStageRiverDraw = stage <= 10 && communityCards.length + 1 === 5;
+  if (!isEarlyStageRiverDraw) {
+    return { nextDeck, card: nextDeck.pop()! };
+  }
+
+  const safeIndices: number[] = [];
+  for (let i = 0; i < nextDeck.length; i++) {
+    const candidate = nextDeck[i];
+    try {
+      const boardEval = evaluateHand([], [...communityCards, candidate]);
+      const boardRank = boardEval.rank ?? 1;
+      if (boardRank < 5) {
+        safeIndices.push(i);
+      }
+    } catch (e) {
+      console.error('Community board smoothing evaluation error:', e);
+    }
+  }
+
+  if (safeIndices.length > 0) {
+    const pickedIndex = safeIndices[Math.floor(Math.random() * safeIndices.length)];
+    const [pickedCard] = nextDeck.splice(pickedIndex, 1);
+    return { nextDeck, card: pickedCard ?? null };
+  }
+
+  return { nextDeck, card: nextDeck.pop()! };
+}
+
 interface AlphaCardRuntime {
   remainingCharges: number;
   cooldown: number;
@@ -111,7 +156,7 @@ interface AlphaCardRuntime {
 function createAlphaCardRuntime(cards: AlphaCard[]): Record<string, AlphaCardRuntime> {
   const runtime: Record<string, AlphaCardRuntime> = {};
   cards.forEach(card => {
-    const rule = getAlphaCardUsageRule(card.type);
+    const rule = getAlphaCardUsageRuleByLevel(card.type, card.level ?? 1);
     runtime[card.id] = {
       remainingCharges: rule.chargesPerStage,
       cooldown: 0,
@@ -159,16 +204,57 @@ export function useGameEngine(): UseGameEngine {
   const [leaderboard, setLeaderboard] = useState<ScoreEntry[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alphaCardRuntimeById, setAlphaCardRuntimeById] = useState<Record<string, AlphaCardRuntime>>({});
+  const [allInReadHint, setAllInReadHint] = useState<string | null>(null);
+  const [opponentCheatWarning, setOpponentCheatWarning] = useState<string | null>(null);
   const [isRoundEnding, setIsRoundEnding] = useState(false);
   const [opponentDialogue, setOpponentDialogue] = useState<string | null>(null);
+  const hasOpponentCheatedThisRoundRef = useRef(false);
 
   // Stale closure 방지를 위한 ref
   const gameStateRef = useRef(gameState);
   gameStateRef.current = gameState;
 
+  const setOpponentCheatUsed = useCallback((value: boolean) => {
+    hasOpponentCheatedThisRoundRef.current = value;
+  }, []);
+
   const addLog = useCallback((msg: string) => {
     setGameState(prev => ({ ...prev, logs: [...prev.logs, msg].slice(-5) }));
   }, []);
+
+  useEffect(() => {
+    const current = gameStateRef.current;
+    if (!['PREFLOP', 'FLOP', 'TURN', 'RIVER'].includes(current.phase) || current.playerHp <= 0) {
+      setAllInReadHint(null);
+      return;
+    }
+
+    try {
+      const opponentEval = evaluateHand(current.opponentHand, current.communityCards);
+      const opponentRank = opponentEval.rank ?? 1;
+      const previewCost = current.playerHp;
+      const previewPot = current.pot + previewCost;
+      const previewChance = getAllInCallChance(
+        current.stage,
+        opponentRank,
+        current.opponentHp,
+        previewCost,
+        previewPot
+      );
+      setAllInReadHint(`올인 예상: ${getAllInReadHint(previewChance)}`);
+    } catch (e) {
+      console.error('ALL_IN hint evaluation error:', e);
+      setAllInReadHint(null);
+    }
+  }, [
+    gameState.phase,
+    gameState.playerHp,
+    gameState.opponentHp,
+    gameState.pot,
+    gameState.stage,
+    gameState.communityCards,
+    gameState.opponentHand,
+  ]);
 
   const getBgUrl = useCallback((stage: number) => {
     // 1-10: 숲1, 11-20: 숲2, 21-30: 성곽 외부, 31-40: 성곽 내부, 41-49: 하늘, 50: 제단
@@ -215,6 +301,8 @@ export function useGameEngine(): UseGameEngine {
       setRoundResultText(null);
       setRevealedDeckCards([]);
       setOpponentDialogue(getEnemyForStage(gameStateRef.current.stage).dialogues.intro);
+      setOpponentCheatWarning(null);
+      setOpponentCheatUsed(false);
       if (shouldTickCooldown) {
         setAlphaCardRuntimeById(prev => {
           const next: Record<string, AlphaCardRuntime> = {};
@@ -420,11 +508,15 @@ export function useGameEngine(): UseGameEngine {
     setSelectedInventoryCards([]);
     setSelectedInventoryItems([]);
     setAlphaCardRuntimeById({});
+    setOpponentCheatWarning(null);
+    setOpponentCheatUsed(false);
   }, []);
 
   // ========== startStage ==========
   const startStage = useCallback(() => {
     const { deck, playerHand, opponentHand } = dealNewRound(gameStateRef.current.stage);
+    setOpponentCheatWarning(null);
+    setOpponentCheatUsed(false);
     
     const enemy = getEnemyForStage(gameStateRef.current.stage);
     setOpponentDialogue(enemy.dialogues.intro);
@@ -502,6 +594,8 @@ export function useGameEngine(): UseGameEngine {
 
   // ========== handleConfirmDiscard ==========
   const handleConfirmDiscard = useCallback((discardIndices: number[]) => {
+    setOpponentCheatWarning(null);
+    setOpponentCheatUsed(false);
     setGameState(prev => {
       const newHand = prev.playerHand.filter((_, i) => !discardIndices.includes(i));
       
@@ -541,7 +635,7 @@ export function useGameEngine(): UseGameEngine {
         logs: newLogs.slice(-5)
       };
     });
-  }, []);
+  }, [setOpponentCheatUsed]);
 
   // ========== handlePlayerAction ==========
   const handlePlayerAction = useCallback((action: 'FOLD' | 'CALL' | 'RAISE' | 'ALL_IN') => {
@@ -665,22 +759,34 @@ export function useGameEngine(): UseGameEngine {
       if (!forceShowdown) {
         if (prev.phase === 'PREFLOP') {
           nextPhase = 'FLOP';
-          nextCommunity.push(nextDeck.pop()!, nextDeck.pop()!, nextDeck.pop()!);
+          for (let i = 0; i < 3; i++) {
+            const draw = drawCommunityCardWithStageBias(nextDeck, nextCommunity, prev.stage);
+            nextDeck = draw.nextDeck;
+            if (draw.card) nextCommunity.push(draw.card);
+          }
           newLogs.push('플랍(Flop) 카드가 깔렸습니다.');
         } else if (prev.phase === 'FLOP') {
           nextPhase = 'TURN';
-          nextCommunity.push(nextDeck.pop()!);
+          const draw = drawCommunityCardWithStageBias(nextDeck, nextCommunity, prev.stage);
+          nextDeck = draw.nextDeck;
+          if (draw.card) nextCommunity.push(draw.card);
           newLogs.push('턴(Turn) 카드가 깔렸습니다.');
         } else if (prev.phase === 'TURN') {
           nextPhase = 'RIVER';
-          nextCommunity.push(nextDeck.pop()!);
+          const draw = drawCommunityCardWithStageBias(nextDeck, nextCommunity, prev.stage);
+          nextDeck = draw.nextDeck;
+          if (draw.card) nextCommunity.push(draw.card);
           newLogs.push('리버(River) 카드가 깔렸습니다.');
         } else if (prev.phase === 'RIVER') {
           nextPhase = 'SHOWDOWN';
         }
         
         // Enemy Cheat Logic
-        if (prev.stage >= 11 && ['FLOP', 'TURN', 'RIVER'].includes(nextPhase)) {
+        if (
+          prev.stage >= 11 &&
+          ['FLOP', 'TURN', 'RIVER'].includes(nextPhase) &&
+          !hasOpponentCheatedThisRoundRef.current
+        ) {
           let cheatChance = 0;
           let canSabotageHand = false;
           let canAlterSuit = false;
@@ -704,6 +810,12 @@ export function useGameEngine(): UseGameEngine {
           }
 
           if (Math.random() < cheatChance) {
+            setOpponentCheatUsed(true);
+            const warningText = '⚠️ 상대가 수상한 움직임을 보입니다.';
+            setOpponentCheatWarning(warningText);
+            setTimeout(() => setOpponentCheatWarning(null), 1800);
+            newLogs.push(warningText);
+
             const types = ['BURN_CARD'];
             if (canSabotageHand) types.push('SABOTAGE_HAND');
             if (canAlterSuit) types.push('ALTER_SUIT');
@@ -738,7 +850,10 @@ export function useGameEngine(): UseGameEngine {
       } else {
         // If forced showdown, deal remaining community cards
         while (nextCommunity.length < 5 && nextDeck.length > 0) {
-          nextCommunity.push(nextDeck.pop()!);
+          const draw = drawCommunityCardWithStageBias(nextDeck, nextCommunity, prev.stage);
+          nextDeck = draw.nextDeck;
+          if (draw.card) nextCommunity.push(draw.card);
+          else break;
         }
       }
 
@@ -785,7 +900,7 @@ export function useGameEngine(): UseGameEngine {
         logs: newLogs.slice(-5)
       };
     });
-  }, [isRoundEnding, activeAlphaCard, handleRoundEnd, addLog]);
+  }, [isRoundEnding, activeAlphaCard, handleRoundEnd, addLog, setOpponentCheatUsed]);
 
   // ========== handleNextStage ==========
   const handleNextStage = useCallback(() => {
@@ -875,6 +990,8 @@ export function useGameEngine(): UseGameEngine {
   // ========== handleRevive ==========
   const handleRevive = useCallback(() => {
     setAlphaCardRuntimeById(createAlphaCardRuntime(gameStateRef.current.equippedAlphaCards));
+    setOpponentCheatWarning(null);
+    setOpponentCheatUsed(false);
     setGameState(prev => {
       const nextDifficulty = prev.difficultyMultiplier + 0.5;
       const nextPlayerHp = prev.maxPlayerHp; // Full heal
@@ -907,7 +1024,7 @@ export function useGameEngine(): UseGameEngine {
         logs: newLogs,
       };
     });
-  }, []);
+  }, [setOpponentCheatUsed]);
 
   // ========== handleGiveUp ==========
   const handleGiveUp = useCallback(() => {
@@ -976,7 +1093,7 @@ export function useGameEngine(): UseGameEngine {
     if (isRoundEnding || current.phase === 'SHOWDOWN') return;
     if (activeAlphaCard) return;
 
-    const usageRule = getAlphaCardUsageRule(card.type);
+    const usageRule = getAlphaCardUsageRuleByLevel(card.type, card.level ?? 1);
     const runtime = alphaCardRuntimeById[card.id] ?? {
       remainingCharges: usageRule.chargesPerStage,
       cooldown: 0,
@@ -1079,19 +1196,41 @@ export function useGameEngine(): UseGameEngine {
     const goToShop = justClearedStage > 0 && justClearedStage % 5 === 0;
 
     setGameState(prev => {
-      // 보상 카드는 소멸하지 않고 모두 인벤토리에 누적
-      const duplicateCount = prev.inventoryAlphaCards.filter(c => c.type === card.type).length;
-      const nextInv = [...prev.inventoryAlphaCards, card];
-      const duplicateLog =
-        duplicateCount > 0
-          ? ` (중복 ${duplicateCount + 1}장째 보유)`
-          : '';
+      const ownedSameType = prev.inventoryAlphaCards.filter(c => c.type === card.type);
+      const maxLevel = getAlphaCardMaxLevel(card.type);
+      const targetToUpgrade = ownedSameType.reduce((acc: AlphaCard | null, current: AlphaCard) => {
+        if (!acc) return current;
+        return (current.level ?? 1) > (acc.level ?? 1) ? current : acc;
+      }, null as AlphaCard | null);
+
+      let nextInv = prev.inventoryAlphaCards;
+      let gainHp = 0;
+      let rewardLog = `${card.name} 획득.`;
+
+      if (!targetToUpgrade) {
+        nextInv = [...prev.inventoryAlphaCards, { ...card, level: card.level ?? 1 }];
+      } else if ((targetToUpgrade.level ?? 1) < maxLevel) {
+        const nextLevel = (targetToUpgrade.level ?? 1) + 1;
+        nextInv = prev.inventoryAlphaCards.map(invCard =>
+          invCard.id === targetToUpgrade.id
+            ? { ...invCard, level: nextLevel }
+            : invCard
+        );
+        rewardLog = `${card.name} 중복 획득: Lv.${targetToUpgrade.level ?? 1} -> Lv.${nextLevel} 강화!`;
+      } else {
+        // Max-level duplicate fallback reward
+        gainHp = 10;
+        rewardLog = `${card.name} 중복 획득: 이미 최대 레벨이라 체력 10을 회복했습니다.`;
+      }
+
+      const nextPlayerHp = Math.min(MAX_PLAYER_HP_LIMIT, Math.min(prev.maxPlayerHp, prev.playerHp + gainHp));
       return {
         ...prev,
         phase: (goToShop ? 'SHOP' : 'DECKBUILDING') as GamePhase,
+        playerHp: nextPlayerHp,
         inventoryAlphaCards: nextInv,
         shopItems: goToShop ? getRandomItems(3) : [],
-        logs: [...prev.logs, `${card.name} 획득${duplicateLog}.${goToShop ? ' 상점에 입장합니다.' : ' 덱을 구성하세요.'}`].slice(-5)
+        logs: [...prev.logs, `${rewardLog}${goToShop ? ' 상점에 입장합니다.' : ' 덱을 구성하세요.'}`].slice(-5)
       };
     });
   }, []);
@@ -1138,6 +1277,8 @@ export function useGameEngine(): UseGameEngine {
     roundResultText,
     damageEffect,
     alphaCardRuntimeById,
+    allInReadHint,
+    opponentCheatWarning,
     isRoundEnding,
     opponentDialogue,
     playerName,

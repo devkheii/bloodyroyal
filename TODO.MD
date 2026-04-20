@@ -35,9 +35,9 @@
 - sorting/filtering by type, cost, consumable, boss
 - duplicate handling policy (keep, convert, or upgrade)
 - [x] Decide duplicate policy:
-- Option A: Keep duplicates (implemented)
+- Option A: Keep duplicates
 - Option B: Convert duplicates to upgrade currency
-- Option C: Merge duplicates into upgraded variant
+- Option C: Merge duplicates into upgraded variant (implemented)
 
 ## Phase 3.5 - Alpha Skill Runtime (Stage Charges + Round Cooldown)
 - [x] Replace per-round single-use flag with per-card runtime (`remainingCharges`, `cooldown`).
@@ -45,6 +45,11 @@
 - [x] Consume 1 charge and apply round cooldown on card use.
 - [x] Tick cooldown by round end progression (`FLOP`+ ended rounds only).
 - [x] Add in-fight UI indicators for charge (`xN`) and cooldown (`CD N`).
+
+## Phase 3.6 - Fairness Telegraph (Immediate UX)
+- [x] Add fuzzy all-in reaction hint UI (`올인 예상: 강공/균형/신중`).
+- [x] Add explicit cheat warning banner before/with cheat resolution.
+- [x] Limit enemy cheat trigger to at most once per round.
 
 ## Phase 4 - Verification
 - [x] Run targeted simulation/checks for all-in response per stage bracket.
@@ -66,6 +71,6 @@
 - high risk sample (callCost=90, oppHp=95, pot=80): Stage 1/10 calls range 45%~65%.
 - Confirmed reward flow no longer contains forced deletion (`nextInv.shift()` removed).
 - Confirmed deckbuilding selects from full inventory and applies slot-limited equip on stage start.
-- Duplicate policy fixed to Option A (keep duplicates):
-- normal reward generation no longer excludes already owned types
-- reward UI now displays `기보유 N장` indicator for offered duplicate cards
+- Duplicate policy switched to merge-upgrade (Option C):
+- reward generation can still offer duplicates, but selection upgrades owned card level
+- level-up fallback at max level grants HP recovery instead of adding redundant duplicates

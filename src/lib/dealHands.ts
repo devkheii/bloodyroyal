@@ -3,7 +3,9 @@ import { Card, createDeck, shuffle, RANKS, SUITS, Rank, Suit } from './poker';
 /**
  * 적 핸드를 생성합니다.
  * 스테이지 구간별 포켓 페어 보정 확률:
- * 1-10: 5%, 11-20: 10%, 21-30: 20%, 31-40: 30%, 41-50+: 40%
+ * 1-10: 2%, 11-20: 10%, 21-30: 20%, 31-40: 30%, 41-50+: 40%
+ * 
+ * 초반(1-10) 포켓페어는 2~9 랭크 위주로 제한하여 과도한 강패 체감을 낮춥니다.
  * 
  * @param deck 현재 덱 (변경됨 — 새 덱이 반환됨)
  * @param stage 현재 스테이지
@@ -17,7 +19,7 @@ export function dealOpponentHand(
 ): { opponentHand: Card[]; remainingDeck: Card[] } {
   let remainingDeck = [...deck];
   const pocketPairChance =
-    stage <= 10 ? 0.05 :
+    stage <= 10 ? 0.02 :
     stage <= 20 ? 0.10 :
     stage <= 30 ? 0.20 :
     stage <= 40 ? 0.30 : 0.40;
@@ -26,7 +28,13 @@ export function dealOpponentHand(
     // 포켓 페어 생성 — 플레이어 손패와 중복 방지
     const playerRanks = playerHand ? playerHand.map(c => c.rank) : [];
     const availableRanks = RANKS.filter(r => !playerRanks.includes(r));
-    const rank: Rank = availableRanks[Math.floor(Math.random() * availableRanks.length)] || RANKS[0];
+    const earlyAllowedRanks = RANKS.slice(0, 8); // 2~9
+    const rankPool =
+      stage <= 10
+        ? availableRanks.filter(r => earlyAllowedRanks.includes(r))
+        : availableRanks;
+    const finalRankPool = rankPool.length > 0 ? rankPool : availableRanks;
+    const rank: Rank = finalRankPool[Math.floor(Math.random() * finalRankPool.length)] || RANKS[0];
 
     const suit1: Suit = SUITS[0];
     const suit2: Suit = SUITS[1];

@@ -32,6 +32,7 @@ export type AlphaCardType =
 
 export interface AlphaCard {
   id: string;
+  level: number;
   type: AlphaCardType;
   name: string;
   description: string;
@@ -46,7 +47,7 @@ export interface AlphaCardUsageRule {
   consumeOnUse?: boolean;
 }
 
-export const ALPHA_CARDS: Record<AlphaCardType, Omit<AlphaCard, 'id'>> = {
+export const ALPHA_CARDS: Record<AlphaCardType, Omit<AlphaCard, 'id' | 'level'>> = {
   PEEK_OPPONENT: { type: 'PEEK_OPPONENT', name: '천리안', description: '상대의 패 1장을 확인합니다. (10 HP 소모)', hpCost: 10, isConsumable: true },
   CHANGE_SUIT: { type: 'CHANGE_SUIT', name: '환영술', description: '내 패 1장의 문양을 바꿉니다. (5 HP 소모)', hpCost: 5 },
   PLUS_ONE: { type: 'PLUS_ONE', name: '조작 (+1)', description: '내 패 1장의 숫자를 1 올립니다. (10 HP 소모)', hpCost: 10 },
@@ -119,9 +120,35 @@ export function getAlphaCardUsageRule(type: AlphaCardType): AlphaCardUsageRule {
   return { ...override };
 }
 
+export function getAlphaCardMaxLevel(type: AlphaCardType): number {
+  if (type === 'MAX_HP_UP' || type === 'BOSS_GREED') return 1;
+  if (ALPHA_CARDS[type].isBossCard) return 2;
+  return 3;
+}
+
+export function getAlphaCardUsageRuleByLevel(type: AlphaCardType, level: number = 1): AlphaCardUsageRule {
+  const base = getAlphaCardUsageRule(type);
+  const maxLevel = getAlphaCardMaxLevel(type);
+  const clampedLevel = Math.max(1, Math.min(maxLevel, Math.floor(level)));
+
+  if (base.consumeOnUse) {
+    return { ...base };
+  }
+
+  const chargeBonus = clampedLevel - 1;
+  const cooldownReduction = clampedLevel >= 3 ? 1 : 0;
+
+  return {
+    ...base,
+    chargesPerStage: base.chargesPerStage + chargeBonus,
+    roundCooldown: Math.max(1, base.roundCooldown - cooldownReduction),
+  };
+}
+
 export function generateAlphaCard(type: AlphaCardType): AlphaCard {
   return {
     id: Math.random().toString(36).substring(7),
+    level: 1,
     ...ALPHA_CARDS[type],
   };
 }
