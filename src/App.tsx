@@ -25,6 +25,11 @@ export default function App() {
     >
       {/* Background Overlay */}
       <div className="absolute inset-0 bg-black/70 pointer-events-none"></div>
+
+      {/* Pixel Flame Torches - left/bottom 값을 조정해서 횃불 위치에 맞추세요 */}
+      <div className="pixel-flame" style={{ left: '19%', bottom: '52%', opacity: '.25' }} />
+      <div className="pixel-flame" style={{ right: '19%', bottom: '52%', animationDelay: '-0.17s', opacity: '.25' }} />
+      <div className="pixel-flame-sm" style={{ left: '50%', bottom: '73%', opacity: '.3' }} />
       
       <motion.div 
         animate={engine.damageEffect ? { x: [-10, 10, -10, 10, 0], y: [-10, 10, -10, 10, 0] } : {}}
