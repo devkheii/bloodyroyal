@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlphaCard } from '../../lib/game';
+import { AlphaCard, getAlphaCardMaxLevel, getAlphaCardUsageRuleByLevel } from '../../lib/game';
 import { AlphaCardUI } from '../AlphaCardUI';
 
 interface CardRewardProps {
@@ -10,6 +10,22 @@ interface CardRewardProps {
 
 export const CardReward: React.FC<CardRewardProps> = ({ rewardCards, inventoryCards, onSelect }) => {
   const getOwnedCount = (card: AlphaCard) => inventoryCards.filter(c => c.type === card.type).length;
+  const getUpgradePreview = (card: AlphaCard): string | null => {
+    const ownedSameType = inventoryCards.filter(c => c.type === card.type);
+    if (ownedSameType.length === 0) return null;
+
+    const highestLevel = ownedSameType.reduce((acc, c) => Math.max(acc, c.level ?? 1), 1);
+    const maxLevel = getAlphaCardMaxLevel(card.type);
+    const currentRule = getAlphaCardUsageRuleByLevel(card.type, highestLevel);
+
+    if (currentRule.consumeOnUse || highestLevel >= maxLevel) {
+      return `선택 시 최대 레벨 보상: 체력 +10`;
+    }
+
+    const nextLevel = highestLevel + 1;
+    const nextRule = getAlphaCardUsageRuleByLevel(card.type, nextLevel);
+    return `선택 시 Lv.${highestLevel} → Lv.${nextLevel} (충전 ${currentRule.chargesPerStage}→${nextRule.chargesPerStage}, CD ${currentRule.roundCooldown}→${nextRule.roundCooldown})`;
+  };
 
   return (
     <div className="flex-grow flex flex-col space-y-6 items-center justify-center">
@@ -21,13 +37,19 @@ export const CardReward: React.FC<CardRewardProps> = ({ rewardCards, inventoryCa
       <div className="flex flex-wrap gap-6 justify-center">
         {rewardCards.map((card, i) => {
           const ownedCount = getOwnedCount(card);
+          const upgradePreview = getUpgradePreview(card);
           return (
             <div key={`${card.id}-${i}`} className="flex flex-col items-center gap-2">
               <AlphaCardUI card={card} onClick={() => onSelect(card)} />
               {ownedCount > 0 && (
-                <div className="text-xs text-yellow-300">
-                  기보유 {ownedCount}장
-                </div>
+                <>
+                  <div className="text-xs text-yellow-300">기보유 {ownedCount}장</div>
+                  {upgradePreview && (
+                    <div className="text-[10px] text-cyan-300 text-center max-w-[220px] leading-tight">
+                      {upgradePreview}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );

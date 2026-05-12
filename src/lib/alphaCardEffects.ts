@@ -132,8 +132,7 @@ export const ALPHA_CARD_EFFECTS: Record<AlphaCardType, AlphaCardEffect> = {
       const drain = Math.min(20, prev.opponentHp);
       ctx.setDamageEffect('OPPONENT');
       setTimeout(() => ctx.setDamageEffect(null), 1000);
-      const newRevealed = [...prev.revealedOpponentCards];
-      newRevealed[Math.floor(Math.random() * 2)] = true;
+      const newRevealed = [true, true];
       return {
         ...prev,
         opponentHp: prev.opponentHp - drain,
@@ -142,7 +141,7 @@ export const ALPHA_CARD_EFFECTS: Record<AlphaCardType, AlphaCardEffect> = {
         equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
       };
     });
-    ctx.addLog(`${card.name} 사용: 상대 체력을 흡수하고 패 1장을 공개합니다!`);
+    ctx.addLog(`${card.name} 사용: 상대 체력을 흡수하고 패 2장을 모두 공개합니다!`);
   },
 
   BOSS_GREED: (card, ctx) => {
@@ -288,6 +287,79 @@ export const ALPHA_CARD_EFFECTS: Record<AlphaCardType, AlphaCardEffect> = {
         equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
       };
     });
+  },
+
+  RANDOMIZE_OPP_SUIT: (card, ctx) => {
+    ctx.setGameState(prev => {
+      if (prev.opponentHand.length === 0) return prev;
+      const idx = Math.floor(Math.random() * prev.opponentHand.length);
+      const target = prev.opponentHand[idx];
+      const suitPool = SUITS.filter(s => s !== target.suit);
+      const nextSuit = suitPool[Math.floor(Math.random() * suitPool.length)] ?? target.suit;
+      const nextOpponentHand = [...prev.opponentHand];
+      nextOpponentHand[idx] = { ...target, suit: nextSuit };
+      return {
+        ...prev,
+        opponentHand: nextOpponentHand,
+        equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
+      };
+    });
+    ctx.addLog(`${card.name} 사용: 상대 패의 문양을 교란했습니다.`);
+  },
+
+  OPP_TO_SEVEN: (card, ctx) => {
+    ctx.setGameState(prev => {
+      if (prev.opponentHand.length === 0) return prev;
+      const idx = Math.floor(Math.random() * prev.opponentHand.length);
+      const nextOpponentHand = [...prev.opponentHand];
+      nextOpponentHand[idx] = { ...nextOpponentHand[idx], rank: '7' as Rank };
+      return {
+        ...prev,
+        opponentHand: nextOpponentHand,
+        equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
+      };
+    });
+    ctx.addLog(`${card.name} 사용: 상대 패 1장을 7로 고정했습니다.`);
+  },
+
+  OPP_RELOAD: (card, ctx) => {
+    ctx.setGameState(prev => {
+      const newDeck = [...prev.deck];
+      const draw1 = newDeck.pop();
+      const draw2 = newDeck.pop();
+      if (!draw1 || !draw2) {
+        return {
+          ...prev,
+          equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
+        };
+      }
+      return {
+        ...prev,
+        deck: newDeck,
+        opponentHand: [draw1, draw2],
+        revealedOpponentCards: [false, false],
+        equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
+      };
+    });
+    ctx.addLog(`${card.name} 사용: 상대의 손패를 버리게 하고 새로 뽑게 했습니다.`);
+  },
+
+  NO_FOLD: (card, ctx) => {
+    ctx.setGameState(prev => ({
+      ...prev,
+      opponentNoFoldActive: true,
+      equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
+    }));
+    ctx.addLog(`${card.name} 사용: 이번 라운드 상대의 폴드를 봉인합니다.`);
+  },
+
+  NO_RAISE: (card, ctx) => {
+    ctx.setGameState(prev => ({
+      ...prev,
+      opponentNoRaiseActive: true,
+      equippedAlphaCards: removeIfConsumable(card, prev.equippedAlphaCards),
+    }));
+    ctx.addLog(`${card.name} 사용: 이번 라운드 상대의 레이즈를 봉인합니다.`);
   },
 
   // === 타겟 선택이 필요한 카드들 (handleHandCardClick에서 처리) ===

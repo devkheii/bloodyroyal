@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlphaCard as AlphaCardType } from '../lib/game';
+import { AlphaCard as AlphaCardType, getAlphaCardMaxLevel, getAlphaCardUsageRuleByLevel } from '../lib/game';
 import { Eye, Droplet, Plus, Minus, RefreshCcw, Skull, Heart, ArrowLeftRight, Search, ArrowUpCircle, Shield, Copy, Hash, Sparkles, CircleDashed, EyeOff } from 'lucide-react';
 
 interface AlphaCardProps {
@@ -42,6 +42,12 @@ export const AlphaCardUI: React.FC<AlphaCardProps> = ({ card, onClick, selected,
   const widthClass = small ? 'w-16' : 'w-24 sm:w-32';
   const heightClass = small ? 'h-24' : 'h-32 sm:h-44';
   const cardLevel = card.level ?? 1;
+  const maxLevel = getAlphaCardMaxLevel(card.type);
+  const currentRule = getAlphaCardUsageRuleByLevel(card.type, cardLevel);
+  const nextLevel = Math.min(maxLevel, cardLevel + 1);
+  const nextRule = getAlphaCardUsageRuleByLevel(card.type, nextLevel);
+  const isLevelingDisabled = !!currentRule.consumeOnUse || maxLevel <= 1;
+  const canUpgrade = !isLevelingDisabled && cardLevel < maxLevel;
   const isOutOfCharge = typeof chargesLeft === 'number' && chargesLeft <= 0;
   const hasCooldown = typeof cooldownLeft === 'number' && cooldownLeft > 0;
   const isBlocked = !!disabled || !!used || isOutOfCharge || hasCooldown;
@@ -96,6 +102,20 @@ export const AlphaCardUI: React.FC<AlphaCardProps> = ({ card, onClick, selected,
           <span className={`${small ? 'text-[10px]' : 'text-[10px] sm:text-[12px]'} text-gray-200 leading-relaxed flex-grow flex items-center justify-center`}>
             {card.description}
           </span>
+          <div className="w-full mt-1 border-t border-gray-700 pt-1 text-[9px] leading-tight text-cyan-200">
+            {isLevelingDisabled ? (
+              <div>강화 효과: 소모형 카드(충전/쿨다운 강화 없음)</div>
+            ) : (
+              <>
+                <div>현재: 충전 {currentRule.chargesPerStage}회 / CD {currentRule.roundCooldown}R</div>
+                {canUpgrade ? (
+                  <div className="text-yellow-300">다음 Lv.{nextLevel}: 충전 {nextRule.chargesPerStage}회 / CD {nextRule.roundCooldown}R</div>
+                ) : (
+                  <div className="text-yellow-300">최대 레벨 도달 (Lv.{maxLevel})</div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
       </div>

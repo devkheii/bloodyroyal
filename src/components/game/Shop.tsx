@@ -14,12 +14,17 @@ export const Shop: React.FC<ShopProps> = ({ gameState, onBuyItem, onExit }) => {
       <p className="text-center text-sm text-gray-400 mb-8">
         체력(HP)을 지불하여 패시브 아이템을 구매할 수 있습니다.<br/>
         현재 내 체력: <span className="text-green-400 font-bold">{gameState.playerHp} HP</span>
+        <br/>
+        공격형 알파 성공률 보너스: <span className="text-cyan-300 font-bold">+{gameState.alphaAttackSuccessBonus}%</span>
       </p>
 
       <div className="flex flex-wrap gap-6 justify-center">
         {gameState.shopItems.map(item => {
-          const isOwned = gameState.inventoryItems.some(i => i.type === item.type);
+          const isTuner = item.type === 'ALPHA_STRIKE_TUNER';
+          const isOwned = !isTuner && gameState.inventoryItems.some(i => i.type === item.type);
+          const isTunerMaxed = isTuner && gameState.alphaAttackSuccessBonus >= 40;
           const canAfford = gameState.playerHp > item.price;
+          const canBuy = !isOwned && !isTunerMaxed && canAfford;
           
           return (
             <div 
@@ -34,11 +39,11 @@ export const Shop: React.FC<ShopProps> = ({ gameState, onBuyItem, onExit }) => {
               <div className="flex flex-col items-center gap-2 w-full">
                 <div className="text-green-400 font-mono font-bold">{item.price} HP</div>
                 <button 
-                  onClick={() => !isOwned && canAfford && onBuyItem(item)}
-                  disabled={isOwned || !canAfford}
-                  className={`w-full py-2 rounded font-bold transition-colors ${isOwned ? 'bg-gray-700 text-gray-500' : canAfford ? 'bg-yellow-600 hover:bg-yellow-500 text-black' : 'bg-red-900 text-red-400 cursor-not-allowed'}`}
+                  onClick={() => canBuy && onBuyItem(item)}
+                  disabled={!canBuy}
+                  className={`w-full py-2 rounded font-bold transition-colors ${!canBuy ? 'bg-gray-700 text-gray-500' : 'bg-yellow-600 hover:bg-yellow-500 text-black'}`}
                 >
-                  {isOwned ? '보유 중' : canAfford ? '구매하기' : '체력 부족'}
+                  {isOwned ? '보유 중' : isTunerMaxed ? '최대 강화' : canAfford ? '구매하기' : '체력 부족'}
                 </button>
               </div>
             </div>

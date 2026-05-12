@@ -126,7 +126,6 @@ export default function App() {
           activeAlphaCard={engine.activeAlphaCard}
           selectedHandCardIndex={null}
           alphaCardRuntimeById={engine.alphaCardRuntimeById}
-          allInReadHint={engine.allInReadHint}
           opponentCheatWarning={engine.opponentCheatWarning}
           isRoundEnding={engine.isRoundEnding}
           opponentDialogue={engine.opponentDialogue}

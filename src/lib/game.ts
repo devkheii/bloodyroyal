@@ -11,7 +11,7 @@ export type AlphaCardType =
   | 'SWAP_HAND'     // 손패 교환: 상대와 내 패를 바꿈
   | 'PEEK_DECK'     // 미래 예지: 덱의 다음 3장 확인
   | 'MAX_HP_UP'     // 최대 체력 증가: 최대 HP +30 및 회복
-  | 'BOSS_EYE'      // 보스(10): 마안 - 상대 체력 20 흡수 + 패 1장 공개
+  | 'BOSS_EYE'      // 보스(10): 마안 - 상대 체력 20 흡수 + 패 2장 공개
   | 'BOSS_GREED'    // 보스(20): 탐욕 - 최대 체력 50 증가 + 50 회복
   | 'BOSS_DEATH'    // 보스(30): 사신 - 상대 체력 40 피해
   | 'BOSS_FATE'     // 보스(40): 운명 - 내 패 2장을 모두 A로 변경
@@ -28,7 +28,12 @@ export type AlphaCardType =
   | 'JOKER'         // 조커로 변경
   | 'BLACKHOLE'     // 블랙홀: 바닥의 카드를 모두 덱으로 되돌리고 새로 깜
   | 'SIXTH_SENSE'   // 제 6의 감각: 바닥에 6번째 카드를 추가
-  | 'THIRD_EYE';    // 제 3의 눈: 내 손패에 3번째 카드를 추가
+  | 'THIRD_EYE'     // 제 3의 눈: 내 손패에 3번째 카드를 추가
+  | 'RANDOMIZE_OPP_SUIT' // 상대 패 문양 무작위 변경
+  | 'OPP_TO_SEVEN'       // 상대 패 1장을 7로 변경
+  | 'OPP_RELOAD'         // 상대 패 2장 교체
+  | 'NO_FOLD'            // 상대 폴드 봉인
+  | 'NO_RAISE';          // 상대 레이즈 봉인
 
 export interface AlphaCard {
   id: string;
@@ -53,21 +58,21 @@ export const ALPHA_CARDS: Record<AlphaCardType, Omit<AlphaCard, 'id' | 'level'>>
   PLUS_ONE: { type: 'PLUS_ONE', name: '조작 (+1)', description: '내 패 1장의 숫자를 1 올립니다. (10 HP 소모)', hpCost: 10 },
   MINUS_ONE: { type: 'MINUS_ONE', name: '조작 (-1)', description: '내 패 1장의 숫자를 1 내립니다. (10 HP 소모)', hpCost: 10 },
   RELOAD: { type: 'RELOAD', name: '재장전', description: '내 패를 모두 버리고 새로 2장을 뽑습니다. (15 HP 소모)', hpCost: 15, isConsumable: true },
-  GUILLOTINE: { type: 'GUILLOTINE', name: '단두대', description: '상대에게 즉시 40의 데미지를 줍니다. (30 HP 소모)', hpCost: 30, isConsumable: true },
-  VAMPIRE: { type: 'VAMPIRE', name: '흡혈귀', description: '상대의 체력을 15 흡수합니다. (10 HP 소모)', hpCost: 10, isConsumable: true },
-  SWAP_HAND: { type: 'SWAP_HAND', name: '운명 교환', description: '상대와 내 손패를 맞바꿉니다. (25 HP 소모)', hpCost: 25, isConsumable: true },
+  GUILLOTINE: { type: 'GUILLOTINE', name: '단두대', description: '상대에게 즉시 40의 데미지를 줍니다. (30 HP 소모, 35% 확률로 상대 패 1장 추가 공개)', hpCost: 30, isConsumable: true },
+  VAMPIRE: { type: 'VAMPIRE', name: '흡혈귀', description: '상대의 체력을 15 흡수합니다. (10 HP 소모, 35% 확률로 상대 패 1장 추가 공개)', hpCost: 10, isConsumable: true },
+  SWAP_HAND: { type: 'SWAP_HAND', name: '운명 교환', description: '상대와 내 손패를 맞바꿉니다. (25 HP 소모, 35% 확률로 상대 패 1장 추가 공개)', hpCost: 25, isConsumable: true },
   PEEK_DECK: { type: 'PEEK_DECK', name: '미래 예지', description: '덱의 다음 3장을 미리 확인합니다. (10 HP 소모)', hpCost: 10, isConsumable: true },
   MAX_HP_UP: { type: 'MAX_HP_UP', name: '생명의 그릇', description: '[1회용] 최대 체력이 30 증가하고 회복합니다.', hpCost: 0, isConsumable: true },
-  BOSS_EYE: { type: 'BOSS_EYE', name: '마안', description: '[보스 전리품] 상대 체력 20 흡수 및 패 1장 공개.', isBossCard: true, isConsumable: true },
+  BOSS_EYE: { type: 'BOSS_EYE', name: '마안', description: '[보스 전리품] 상대 체력 20 흡수 및 패 2장 모두 공개.', isBossCard: true, isConsumable: true },
   BOSS_GREED: { type: 'BOSS_GREED', name: '탐욕', description: '[보스 전리품/1회용] 최대 체력 50 증가 및 50 회복.', isBossCard: true, isConsumable: true },
-  BOSS_DEATH: { type: 'BOSS_DEATH', name: '사신', description: '[보스 전리품] 상대에게 40의 피해를 줍니다.', isBossCard: true, isConsumable: true },
+  BOSS_DEATH: { type: 'BOSS_DEATH', name: '사신', description: '[보스 전리품] 상대에게 40의 피해를 줍니다. (35% 확률로 상대 패 1장 추가 공개)', isBossCard: true, isConsumable: true },
   BOSS_FATE: { type: 'BOSS_FATE', name: '운명', description: '[보스 전리품] 내 패 2장을 모두 A로 변경합니다.', isBossCard: true, isConsumable: true },
   BOSS_MIRACLE: { type: 'BOSS_MIRACLE', name: '기적', description: '[보스 전리품] 커뮤니티 카드를 모두 새로 뽑고 체력을 30 회복합니다.', isBossCard: true, isConsumable: true },
   DOUBLE_POT: { type: 'DOUBLE_POT', name: '광기의 도박', description: '현재 팟(판돈)을 두 배로 늘립니다. (15 HP 소모)', hpCost: 15, isConsumable: true },
   SHIELD: { type: 'SHIELD', name: '성기사의 방패', description: '이번 라운드 패배 시 받는 데미지가 절반이 됩니다. (10 HP 소모)', hpCost: 10, isConsumable: true },
-  COPY_CARD: { type: 'COPY_CARD', name: '거울상', description: '상대의 패 1장을 복사하여 내 패로 만듭니다. (20 HP 소모)', hpCost: 20, isConsumable: true },
+  COPY_CARD: { type: 'COPY_CARD', name: '거울상', description: '상대의 패 1장을 복사하여 내 패로 만듭니다. (20 HP 소모, 35% 확률로 상대 패 1장 추가 공개)', hpCost: 20, isConsumable: true },
   LUCKY_SEVEN: { type: 'LUCKY_SEVEN', name: '행운의 7', description: '내 패 1장의 숫자를 7로 바꿉니다. (15 HP 소모)', hpCost: 15 },
-  FORCE_FOLD: { type: 'FORCE_FOLD', name: '강제 폴드', description: '[보스 전리품] 상대방을 강제로 폴드하게 만듭니다.', isBossCard: true, isConsumable: true },
+  FORCE_FOLD: { type: 'FORCE_FOLD', name: '강제 폴드', description: '[보스 전리품] 상대방을 강제로 폴드하게 만듭니다. (35% 확률로 상대 패 1장 추가 공개)', isBossCard: true, isConsumable: true },
   MAKE_SPADE: { type: 'MAKE_SPADE', name: '스페이드의 저주', description: '내 패 1장의 문양을 스페이드로 바꿉니다. (10 HP 소모)', hpCost: 10 },
   MAKE_HEART: { type: 'MAKE_HEART', name: '하트의 축복', description: '내 패 1장의 문양을 하트로 바꿉니다. (10 HP 소모)', hpCost: 10 },
   MAKE_DIAMOND: { type: 'MAKE_DIAMOND', name: '다이아의 탐욕', description: '내 패 1장의 문양을 다이아로 바꿉니다. (10 HP 소모)', hpCost: 10 },
@@ -76,6 +81,11 @@ export const ALPHA_CARDS: Record<AlphaCardType, Omit<AlphaCard, 'id' | 'level'>>
   BLACKHOLE: { type: 'BLACKHOLE', name: '블랙홀', description: '바닥에 깔린 카드를 모두 덱으로 되돌리고 새로 깝니다. (25 HP 소모)', hpCost: 25, isConsumable: true },
   SIXTH_SENSE: { type: 'SIXTH_SENSE', name: '제 6의 감각', description: '바닥에 6번째 커뮤니티 카드를 추가합니다. (30 HP 소모)', hpCost: 30, isConsumable: true },
   THIRD_EYE: { type: 'THIRD_EYE', name: '제 3의 눈', description: '내 손패에 3번째 카드를 추가합니다. (35 HP 소모)', hpCost: 35, isConsumable: true },
+  RANDOMIZE_OPP_SUIT: { type: 'RANDOMIZE_OPP_SUIT', name: '혼돈 문양', description: '상대 패 1장의 문양을 무작위로 변경합니다. (15 HP 소모, 35% 확률로 상대 패 1장 추가 공개)', hpCost: 15, isConsumable: true },
+  OPP_TO_SEVEN: { type: 'OPP_TO_SEVEN', name: '칠흑 각인', description: '상대 패 1장의 숫자를 7로 고정합니다. (20 HP 소모, 35% 확률로 상대 패 1장 추가 공개)', hpCost: 20, isConsumable: true },
+  OPP_RELOAD: { type: 'OPP_RELOAD', name: '기억 소거', description: '상대 패 2장을 모두 버리고 새로 뽑게 합니다. (25 HP 소모, 35% 확률로 상대 패 1장 추가 공개)', hpCost: 25, isConsumable: true },
+  NO_FOLD: { type: 'NO_FOLD', name: '도주 봉인', description: '이번 라운드 동안 상대는 폴드할 수 없습니다. (20 HP 소모, 35% 확률로 상대 패 1장 추가 공개)', hpCost: 20, isConsumable: true },
+  NO_RAISE: { type: 'NO_RAISE', name: '광기 억제', description: '이번 라운드 동안 상대는 레이즈할 수 없습니다. (15 HP 소모, 35% 확률로 상대 패 1장 추가 공개)', hpCost: 15, isConsumable: true },
 };
 
 const DEFAULT_ALPHA_CARD_USAGE_RULE: AlphaCardUsageRule = {
@@ -105,6 +115,11 @@ const ALPHA_CARD_USAGE_OVERRIDES: Partial<Record<AlphaCardType, AlphaCardUsageRu
   BLACKHOLE: { chargesPerStage: 1, roundCooldown: 2 },
   SIXTH_SENSE: { chargesPerStage: 1, roundCooldown: 2 },
   THIRD_EYE: { chargesPerStage: 1, roundCooldown: 2 },
+  RANDOMIZE_OPP_SUIT: { chargesPerStage: 1, roundCooldown: 2 },
+  OPP_TO_SEVEN: { chargesPerStage: 1, roundCooldown: 2 },
+  OPP_RELOAD: { chargesPerStage: 1, roundCooldown: 2 },
+  NO_FOLD: { chargesPerStage: 1, roundCooldown: 2 },
+  NO_RAISE: { chargesPerStage: 1, roundCooldown: 2 },
   BOSS_EYE: { chargesPerStage: 1, roundCooldown: 2 },
   BOSS_DEATH: { chargesPerStage: 1, roundCooldown: 2 },
   BOSS_FATE: { chargesPerStage: 1, roundCooldown: 2 },
@@ -143,6 +158,41 @@ export function getAlphaCardUsageRuleByLevel(type: AlphaCardType, level: number 
     chargesPerStage: base.chargesPerStage + chargeBonus,
     roundCooldown: Math.max(1, base.roundCooldown - cooldownReduction),
   };
+}
+
+export type AlphaCardExclusiveGroup = 'VISION';
+
+export function getAlphaCardExclusiveGroup(type: AlphaCardType): AlphaCardExclusiveGroup | null {
+  if (type === 'PEEK_OPPONENT' || type === 'BOSS_EYE') return 'VISION';
+  return null;
+}
+
+function getExclusiveCardScore(card: AlphaCard): number {
+  let score = 0;
+  if (card.type === 'BOSS_EYE') score += 100;
+  if (card.isBossCard) score += 50;
+  score += (card.level ?? 1) * 10;
+  score += card.hpCost ?? 0;
+  return score;
+}
+
+export function enforceAlphaCardExclusivity(cards: AlphaCard[]): AlphaCard[] {
+  const bestByGroup = new Map<AlphaCardExclusiveGroup, AlphaCard>();
+
+  for (const card of cards) {
+    const group = getAlphaCardExclusiveGroup(card.type);
+    if (!group) continue;
+    const current = bestByGroup.get(group);
+    if (!current || getExclusiveCardScore(card) > getExclusiveCardScore(current)) {
+      bestByGroup.set(group, card);
+    }
+  }
+
+  return cards.filter(card => {
+    const group = getAlphaCardExclusiveGroup(card.type);
+    if (!group) return true;
+    return bestByGroup.get(group)?.id === card.id;
+  });
 }
 
 export function generateAlphaCard(type: AlphaCardType): AlphaCard {
@@ -197,7 +247,11 @@ export type ItemType =
   | 'THORN_ARMOR'  // 쇼다운 패배 시 상대에게 3 피해
   | 'LUCKY_COIN'   // 10% 확률로 기본 판돈(Ante) 면제
   | 'BLOOD_AMULET' // 쇼다운 승리 시 3 HP 회복
-  | 'HAWK_EYE';    // 10% 확률로 프리플랍에서 상대 패 1장 공개
+  | 'HAWK_EYE'     // 10% 확률로 프리플랍에서 상대 패 1장 공개
+  | 'DOMINANCE_RADAR'    // 상대 족보 우위 경고(히든 포함)
+  | 'PAIR_SCANNER'       // 상대 페어 이상 경고
+  | 'NULL_BARRIER'       // 상대 공격 무력화 + 체력 회복
+  | 'ALPHA_STRIKE_TUNER'; // 알파 공격 성공률 +5%
 
 export interface Item {
   id: string;
@@ -213,6 +267,10 @@ export const ITEMS: Record<ItemType, Omit<Item, 'id'>> = {
   LUCKY_COIN: { type: 'LUCKY_COIN', name: '행운의 동전', description: '40% 확률로 기본 판돈(5 HP)을 내지 않습니다.', price: 30 },
   BLOOD_AMULET: { type: 'BLOOD_AMULET', name: '피의 부적', description: '쇼다운에서 승리 시 15 HP를 회복합니다.', price: 25 },
   HAWK_EYE: { type: 'HAWK_EYE', name: '매의 눈', description: '스테이지 시작 시 40% 확률로 상대 패 1장을 봅니다.', price: 35 },
+  DOMINANCE_RADAR: { type: 'DOMINANCE_RADAR', name: '지배자 레이더', description: '[쿨타임] 상대 족보가 내 족보보다 높을 때 경고합니다. (히든 포함)', price: 100 },
+  PAIR_SCANNER: { type: 'PAIR_SCANNER', name: '페어 스캐너', description: '[쿨타임] 상대 족보가 원페어 이상이면 경고합니다.', price: 40 },
+  NULL_BARRIER: { type: 'NULL_BARRIER', name: '널 배리어', description: '[스테이지당 2회] 상대 공격을 무력화하고 체력 10 회복.', price: 50 },
+  ALPHA_STRIKE_TUNER: { type: 'ALPHA_STRIKE_TUNER', name: '알파 타격 튜너', description: '구매 시 알파 공격 성공률 +5% (최대 +40%).', price: 35 },
 };
 
 export function generateItem(type: ItemType): Item {
@@ -268,6 +326,14 @@ export interface GameState {
   playerAggression: number;
   reviveCount: number;
   difficultyMultiplier: number;
+
+  // Item/Skill Runtime
+  opponentStrongerWarnCooldown: number;
+  opponentPairWarnCooldown: number;
+  attackNullifyCharges: number;
+  alphaAttackSuccessBonus: number; // 0~40 (%p)
+  opponentNoFoldActive: boolean;
+  opponentNoRaiseActive: boolean;
 }
 
 export function getOpponentMaxHp(stage: number, multiplier: number = 1): number {

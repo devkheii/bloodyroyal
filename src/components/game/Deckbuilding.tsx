@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { GameState } from '../../lib/game';
+import { GameState, enforceAlphaCardExclusivity, getAlphaCardExclusiveGroup } from '../../lib/game';
 import { AlphaCardUI } from '../AlphaCardUI';
 
 interface DeckbuildingProps {
@@ -55,6 +55,8 @@ export const Deckbuilding: React.FC<DeckbuildingProps> = ({
         이번 스테이지에 사용할 조커를 최대 {getMaxEquipSlots(gameState.stage)}장 장착하세요.
         <br/>
         패시브 아이템은 최대 {getMaxItemSlots(gameState.stage)}개 장착 가능합니다.
+        <br/>
+        투시 계열(`천리안`/`마안`)은 동시에 장착할 수 없습니다.
       </p>
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-center text-xs">
         <div className="text-gray-300 text-center sm:text-left">보유 조커: {gameState.inventoryAlphaCards.length}장</div>
@@ -94,10 +96,21 @@ export const Deckbuilding: React.FC<DeckbuildingProps> = ({
               } else {
                 setSelectedInventoryCards(prev => {
                   const maxSlots = getMaxEquipSlots(gameState.stage);
-                  if (prev.length >= maxSlots) {
-                    return [...prev.slice(1), card.id];
+                  const candidateGroup = getAlphaCardExclusiveGroup(card.type);
+
+                  let next = prev.filter(id => {
+                    if (!candidateGroup) return true;
+                    const picked = gameState.inventoryAlphaCards.find(c => c.id === id);
+                    if (!picked) return true;
+                    return getAlphaCardExclusiveGroup(picked.type) !== candidateGroup;
+                  });
+
+                  if (next.length >= maxSlots) {
+                    next = [...next.slice(1), card.id];
+                  } else {
+                    next = [...next, card.id];
                   }
-                  return [...prev, card.id];
+                  return next;
                 });
               }
             }}
@@ -149,6 +162,7 @@ export const Deckbuilding: React.FC<DeckbuildingProps> = ({
                const shuffled = [...gameState.inventoryAlphaCards].sort(() => 0.5 - Math.random());
                toEquipCards = shuffled.slice(0, maxSlots);
             }
+            toEquipCards = enforceAlphaCardExclusivity(toEquipCards);
 
             let toEquipItems = gameState.inventoryItems.filter(i => selectedInventoryItems.includes(i.id));
             if (toEquipItems.length === 0 && gameState.inventoryItems.length > 0) {

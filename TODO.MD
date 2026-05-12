@@ -27,6 +27,13 @@
 - Stage 41-50: high call bias with limited folds
 - [x] Add deterministic clamp for call chance range (e.g. min/max bounds).
 
+## Phase 2.5 - Early Stage Fairness Tuning
+- [x] Reduce opponent pocket-pair bias for early game:
+- Stage 1-10: 2%, 11-20: 10%, 21-30: 20%, 31-40: 30%, 41-50+: 40%
+- [x] Limit early forced pocket-pair ranks to `2~9` to reduce high-pair spikes.
+- [x] Add early-stage community smoothing:
+- avoid creating board-only `Straight+` on river in Stage 1-10.
+
 ## Phase 3 - Reward/Progression Redesign (Mid Term)
 - [x] Split progression concepts:
 - Inventory = collection (no forced deletion)
@@ -38,6 +45,8 @@
 - Option A: Keep duplicates
 - Option B: Convert duplicates to upgrade currency
 - Option C: Merge duplicates into upgraded variant (implemented)
+- [x] Show card upgrade visibility in UI:
+- Alpha card displays `Lv.N` on card face and tooltip.
 
 ## Phase 3.5 - Alpha Skill Runtime (Stage Charges + Round Cooldown)
 - [x] Replace per-round single-use flag with per-card runtime (`remainingCharges`, `cooldown`).
@@ -50,6 +59,38 @@
 - [x] Add fuzzy all-in reaction hint UI (`올인 예상: 강공/균형/신중`).
 - [x] Add explicit cheat warning banner before/with cheat resolution.
 - [x] Limit enemy cheat trigger to at most once per round.
+
+## Phase 3.7 - New Item/Alpha Runtime Rules
+- [x] Add new shop items:
+- `DOMINANCE_RADAR` (100 HP, 히든 포함 족보 우위 경고)
+- `PAIR_SCANNER` (40 HP, 원페어 이상 경고)
+- `NULL_BARRIER` (50 HP, 스테이지당 2회 공격 무력화 + 10 회복)
+- `ALPHA_STRIKE_TUNER` (35 HP, 구매 시 공격형 알파 성공률 +5%, 최대 +40%)
+- [x] Implement warning item cooldown runtime:
+- dominance radar cooldown tick
+- pair scanner cooldown tick
+- [x] Apply dominance warning using full hidden information (`opponentHand + board` equivalent in current phase).
+- [x] Add tuner stack purchase logic:
+- allow repeated purchase until +40%
+- disable purchase when maxed
+- [x] Add per-round control flags:
+- `NO_FOLD`, `NO_RAISE` status reset on new round
+
+## Phase 3.8 - New Alpha Cards + Counterplay
+- [x] Add opponent-target alpha cards:
+- `RANDOMIZE_OPP_SUIT`
+- `OPP_TO_SEVEN`
+- `OPP_RELOAD`
+- `NO_FOLD`
+- `NO_RAISE`
+- [x] Connect all new alpha cards in `ALPHA_CARD_EFFECTS`.
+- [x] Fix all-in/no-fold interaction:
+- remove paradoxical early return branch
+- force call while preserving normal showdown flow
+- [x] Add stage-based anti-alpha rules:
+- Stage 1-10: attack-type alpha guaranteed hit
+- Stage 11+: attack-type alpha hit chance = `75% + tuner bonus`
+- Stage 11+: non-attack alpha has 25% nullify chance (`작두대령`, round-limited)
 
 ## Phase 4 - Verification
 - [x] Run targeted simulation/checks for all-in response per stage bracket.
@@ -74,3 +115,7 @@
 - Duplicate policy switched to merge-upgrade (Option C):
 - reward generation can still offer duplicates, but selection upgrades owned card level
 - level-up fallback at max level grants HP recovery instead of adding redundant duplicates
+- Early-stage fairness tuning applied:
+- opponent pocket-pair chance is now 2/10/20/30/40 by stage brackets
+- early forced pair rank pool constrained to `2~9`
+- Stage 1-10 river draw smooths out board-only `Straight+` outcomes when possible

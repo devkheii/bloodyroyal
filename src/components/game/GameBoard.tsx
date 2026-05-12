@@ -13,7 +13,6 @@ interface GameBoardProps {
   activeAlphaCard: AlphaCard | null;
   selectedHandCardIndex: number | null;
   alphaCardRuntimeById: Record<string, { remainingCharges: number; cooldown: number }>;
-  allInReadHint: string | null;
   opponentCheatWarning: string | null;
   isRoundEnding: boolean;
   opponentDialogue: string | null;
@@ -28,7 +27,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   activeAlphaCard,
   selectedHandCardIndex,
   alphaCardRuntimeById,
-  allInReadHint,
   opponentCheatWarning,
   isRoundEnding,
   opponentDialogue,
@@ -242,11 +240,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           {/* Controls */}
           {['PREFLOP', 'FLOP', 'TURN', 'RIVER'].includes(gameState.phase) && (
             <div className="flex flex-col gap-2 items-center w-full justify-center flex-wrap pt-4">
-              {allInReadHint && (
-                <div className="text-[10px] sm:text-xs text-yellow-300 font-bold bg-black/40 border border-yellow-600 px-2 py-1 rounded">
-                  {allInReadHint}
-                </div>
-              )}
               <div className="flex gap-2 items-center w-full justify-center flex-wrap">
               {gameState.playerHp > 0 ? (
                 <>
