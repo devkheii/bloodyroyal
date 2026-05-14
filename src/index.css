@@ -9,6 +9,8 @@
 
 @theme {
   --font-pixel: "DungGeunMo", system-ui, sans-serif;
+  --text-xs: 1rem;
+  --text-sm: 1.05rem;
 }
 
 @layer utilities {
@@ -28,6 +30,7 @@
 
 body {
   font-family: var(--font-pixel);
+  font-size: 18px;
   background-color: #1a1a1a;
   background-image: url("./images/dungeon_bg.png");
   background-position: center;
@@ -130,7 +133,7 @@ img, canvas {
   padding: 12px 28px;
   background: rgba(10, 10, 30, 0.85);
   color: #F0E6D0;
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   border: 2px solid var(--corner-gold);
   cursor: pointer;
   text-shadow: 0 1px 3px rgba(200, 169, 110, 0.3);
@@ -222,6 +225,110 @@ img, canvas {
     inset 0 0 0 2px rgba(10, 10, 30, 0.9),
     inset 0 0 0 3px rgba(200, 169, 110, 0.2),
     0 0 0 rgba(0, 0, 0, 0);
+}
+
+/* ===== Alpha Card Style ===== */
+.alpha-card {
+  --card-gold: #C8A96E;
+  --card-dark: #9A7B4F;
+  image-rendering: pixelated;
+}
+
+.alpha-card-front {
+  position: relative;
+  height: 100%;
+  background: rgba(10, 10, 30, 0.9);
+  border: 2px solid var(--card-gold);
+  color: #F0E6D0;
+  box-shadow:
+    inset 0 0 0 2px rgba(10, 10, 30, 0.9),
+    inset 0 0 0 3px rgba(200, 169, 110, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: all 0.15s ease;
+}
+
+/* 카드 4모서리 장식 - 좌상단 + 우상단 */
+.alpha-card-front::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    /* 좌상단 */
+    linear-gradient(var(--card-gold), var(--card-gold)) 0 0 / 4px 4px no-repeat,
+    linear-gradient(var(--card-gold), var(--card-gold)) 4px 0 / 4px 4px no-repeat,
+    linear-gradient(var(--card-gold), var(--card-gold)) 0 4px / 4px 4px no-repeat,
+    linear-gradient(var(--card-dark), var(--card-dark)) 8px 0 / 4px 4px no-repeat,
+    linear-gradient(var(--card-dark), var(--card-dark)) 0 8px / 4px 4px no-repeat,
+    /* 우상단 */
+    linear-gradient(var(--card-gold), var(--card-gold)) 100% 0 / 4px 4px no-repeat,
+    linear-gradient(var(--card-gold), var(--card-gold)) calc(100% - 4px) 0 / 4px 4px no-repeat,
+    linear-gradient(var(--card-gold), var(--card-gold)) 100% 4px / 4px 4px no-repeat,
+    linear-gradient(var(--card-dark), var(--card-dark)) calc(100% - 8px) 0 / 4px 4px no-repeat,
+    linear-gradient(var(--card-dark), var(--card-dark)) 100% 8px / 4px 4px no-repeat;
+  transition: all 0.15s ease;
+}
+
+/* 카드 4모서리 장식 - 좌하단 + 우하단 */
+.alpha-card-front::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    /* 좌하단 */
+    linear-gradient(var(--card-gold), var(--card-gold)) 0 100% / 4px 4px no-repeat,
+    linear-gradient(var(--card-gold), var(--card-gold)) 4px 100% / 4px 4px no-repeat,
+    linear-gradient(var(--card-gold), var(--card-gold)) 0 calc(100% - 4px) / 4px 4px no-repeat,
+    linear-gradient(var(--card-dark), var(--card-dark)) 8px 100% / 4px 4px no-repeat,
+    linear-gradient(var(--card-dark), var(--card-dark)) 0 calc(100% - 8px) / 4px 4px no-repeat,
+    /* 우하단 */
+    linear-gradient(var(--card-gold), var(--card-gold)) 100% 100% / 4px 4px no-repeat,
+    linear-gradient(var(--card-gold), var(--card-gold)) calc(100% - 4px) 100% / 4px 4px no-repeat,
+    linear-gradient(var(--card-gold), var(--card-gold)) 100% calc(100% - 4px) / 4px 4px no-repeat,
+    linear-gradient(var(--card-dark), var(--card-dark)) calc(100% - 8px) 100% / 4px 4px no-repeat,
+    linear-gradient(var(--card-dark), var(--card-dark)) 100% calc(100% - 8px) / 4px 4px no-repeat;
+  transition: all 0.15s ease;
+}
+
+.alpha-card-front.card-selected {
+  --card-gold: #facc15;
+  --card-dark: #b89a10;
+  border-color: #facc15;
+  box-shadow:
+    inset 0 0 0 2px rgba(10, 10, 30, 0.9),
+    inset 0 0 0 3px rgba(250, 204, 21, 0.4),
+    0 0 10px rgba(250, 204, 21, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.alpha-card-front:hover {
+  --card-gold: #E0C98A;
+  --card-dark: #B89A60;
+  border-color: #E0C98A;
+  box-shadow:
+    inset 0 0 0 2px rgba(10, 10, 30, 0.9),
+    inset 0 0 0 3px rgba(224, 201, 138, 0.5),
+    0 0 10px rgba(200, 169, 110, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.alpha-card-tooltip {
+  background: rgba(10, 10, 30, 0.95);
+  border: 2px solid #C8A96E;
+  box-shadow:
+    inset 0 0 0 2px rgba(10, 10, 30, 0.9),
+    inset 0 0 0 3px rgba(200, 169, 110, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.alpha-card-badge {
+  z-index: 1;
+  border: 3px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  font-size: 1.25rem;
 }
 
 /* ===== Small Pixel Flame Effect ===== */

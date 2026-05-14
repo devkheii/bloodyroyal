@@ -72,7 +72,7 @@ export default function App() {
       <header className="flex justify-end items-center mb-1 border-b border-gray-700 pb-1">
         {engine.gameState.phase !== 'MENU' && (
           <div className="flex gap-4 text-xs sm:text-sm">
-            <div className="text-purple-400">판 뒤엎기: {engine.gameState.reviveCount}</div>
+            <div className="text-yellow-600">판 뒤엎기: {engine.gameState.reviveCount}</div>
           </div>
         )}
       </header>

@@ -50,7 +50,7 @@ export const Deckbuilding: React.FC<DeckbuildingProps> = ({
 
   return (
     <div className="flex-grow flex flex-col space-y-6">
-      <h2 className="text-xl text-center text-purple-400">덱 및 아이템 구성</h2>
+      <h2 className="text-xl text-center text-yellow-600">덱 및 아이템 구성</h2>
       <p className="text-center text-xs text-gray-400">
         이번 스테이지에 사용할 조커를 최대 {getMaxEquipSlots(gameState.stage)}장 장착하세요.
         <br/>
@@ -173,7 +173,7 @@ export const Deckbuilding: React.FC<DeckbuildingProps> = ({
 
             onStartStage(toEquipCards, toEquipItems);
           }}
-          className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white border-4 border-green-800 rounded-sm"
+          className="btn-bloodyroyal btn-bloodyroyal-primary"
         >
           스테이지 {gameState.stage} 시작
         </button>

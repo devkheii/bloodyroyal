@@ -33,7 +33,7 @@ export const PlayingCard: React.FC<CardProps> = ({ card, hidden, onClick, select
       >
         <div className="text-yellow-400 text-[10px] sm:text-xs">JOKER</div>
         <div className="text-2xl sm:text-4xl mt-1">🃏</div>
-        <div className="text-purple-400 text-[8px] sm:text-[10px] mt-1">?</div>
+        <div className="text-yellow-600 text-[8px] sm:text-[10px] mt-1">?</div>
       </div>
     );
   }

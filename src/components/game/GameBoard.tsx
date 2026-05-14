@@ -141,7 +141,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       <div className="flex flex-col items-center justify-center py-2 relative">
         {revealedDeckCards.length > 0 && (
           <div className="absolute top-0 flex flex-col items-center -mt-8">
-            <div className="text-purple-400 text-[10px] mb-1">미래 예지 (Next Cards)</div>
+            <div className="text-yellow-600 text-[10px] mb-1">미래 예지 (Next Cards)</div>
             <div className="flex gap-1 scale-50 origin-top opacity-80">
               {revealedDeckCards.map((card, i) => <PlayingCard key={i} card={card} />)}
             </div>

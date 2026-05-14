@@ -30,7 +30,7 @@ export const DiscardPhase: React.FC<DiscardPhaseProps> = ({ gameState, onConfirm
   return (
     <div className="flex-grow flex flex-col items-center justify-center space-y-8 p-4">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-yellow-400 mb-2">시작 패 선택</h2>
+        <h2 className="text-3xl text-yellow-400 mb-2">시작 패 선택</h2>
         <p className="text-gray-300">버릴 카드 2장을 선택하세요.</p>
       </div>
 
@@ -49,7 +49,7 @@ export const DiscardPhase: React.FC<DiscardPhaseProps> = ({ gameState, onConfirm
               }`}
               style={{ boxShadow: isSelected ? 'none' : '4px 4px 0px #000' }}
             >
-              <div className={`text-3xl font-bold ${isRed ? 'text-red-600' : 'text-black'}`}>
+              <div className={`text-4xl ${isRed ? 'text-red-600' : 'text-black'}`}>
                 {card.rank === 'T' ? '10' : card.rank}
               </div>
               <div className={`text-4xl ${isRed ? 'text-red-600' : 'text-black'}`}>
@@ -68,12 +68,7 @@ export const DiscardPhase: React.FC<DiscardPhaseProps> = ({ gameState, onConfirm
       <button
         onClick={handleConfirm}
         disabled={selectedIndices.length !== 2}
-        className={`px-8 py-4 border-4 text-xl font-bold transition-transform ${
-          selectedIndices.length === 2 
-            ? 'bg-green-600 hover:bg-green-500 text-white border-black active:translate-y-1 active:translate-x-1' 
-            : 'bg-gray-700 text-gray-500 border-gray-900 cursor-not-allowed'
-        }`}
-        style={{ boxShadow: selectedIndices.length === 2 ? '6px 6px 0px #000' : 'none' }}
+        className={`btn-bloodyroyal btn-bloodyroyal-primary ${selectedIndices.length !== 2 ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         선택 완료 ({selectedIndices.length}/2)
       </button>

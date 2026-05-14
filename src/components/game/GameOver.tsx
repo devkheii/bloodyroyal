@@ -14,7 +14,7 @@ export const GameOver: React.FC<GameOverProps> = ({ gameState, onKeepCard }) => 
       <p className="text-sm text-gray-300">모든 체력을 잃었습니다. (도달 스테이지: {gameState.stage})</p>
       
       <div className="border-t border-gray-700 w-full pt-8 flex flex-col items-center">
-        <p className="text-xs text-purple-400 mb-4">다음 게임으로 계승할 조커를 1장 선택하세요:</p>
+        <p className="text-xs text-yellow-600 mb-4">다음 게임으로 계승할 조커를 1장 선택하세요:</p>
         <div className="flex flex-wrap gap-4 justify-center">
           {gameState.inventoryAlphaCards.map(card => (
             <AlphaCardUI 

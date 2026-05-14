@@ -29,7 +29,7 @@ export const CardReward: React.FC<CardRewardProps> = ({ rewardCards, inventoryCa
 
   return (
     <div className="flex-grow flex flex-col space-y-6 items-center justify-center">
-      <h2 className="text-2xl text-center text-purple-400">보상을 선택하세요</h2>
+      <h2 className="text-2xl text-center text-yellow-300">보상을 선택하세요</h2>
       <p className="text-center text-sm text-gray-400 mb-8">
         인벤토리에 추가할 조커를 1장 선택하세요. 중복 카드는 기존 카드 강화로 전환됩니다.
       </p>
@@ -43,9 +43,9 @@ export const CardReward: React.FC<CardRewardProps> = ({ rewardCards, inventoryCa
               <AlphaCardUI card={card} onClick={() => onSelect(card)} />
               {ownedCount > 0 && (
                 <>
-                  <div className="text-xs text-yellow-300">기보유 {ownedCount}장</div>
+                  <div className="text-sm text-yellow-300">기보유 {ownedCount}장</div>
                   {upgradePreview && (
-                    <div className="text-[10px] text-cyan-300 text-center max-w-[220px] leading-tight">
+                    <div className="text-xs text-cyan-300 text-center max-w-[240px] leading-tight">
                       {upgradePreview}
                     </div>
                   )}
