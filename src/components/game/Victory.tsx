@@ -25,10 +25,9 @@ export const Victory: React.FC<VictoryProps> = ({
       <h2 className="text-5xl text-green-400 font-bold" style={{ textShadow: '4px 4px 0px #000' }}>스테이지 클리어!</h2>
       <p className="font-bold">상대를 물리쳤습니다.</p>
       {gameState.stage < 50 ? (
-        <button 
+        <button
           onClick={onNextStage}
-          className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white border-4 border-black transition-transform active:translate-y-1 active:translate-x-1 font-bold"
-          style={{ boxShadow: '4px 4px 0px #000' }}
+          className="btn-bloodyroyal btn-bloodyroyal-green"
         >
           다음 스테이지
         </button>
@@ -46,19 +45,17 @@ export const Victory: React.FC<VictoryProps> = ({
             style={{ boxShadow: 'inset 4px 4px 0px rgba(0,0,0,0.5)' }}
           />
           <div className="flex gap-4">
-            <button 
+            <button
               onClick={onSaveScore}
               disabled={!playerName.trim() || isSubmitting}
-              className="px-6 py-3 bg-yellow-400 hover:bg-yellow-300 disabled:bg-gray-600 text-black border-4 border-black transition-transform active:translate-y-1 active:translate-x-1 font-bold"
-              style={{ boxShadow: '4px 4px 0px #000' }}
+              className="btn-bloodyroyal btn-bloodyroyal-allin disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? '저장 중...' : '기록 저장'}
             </button>
-            <button 
+            <button
               onClick={onSkipScore}
               disabled={isSubmitting}
-              className="px-6 py-3 bg-gray-600 hover:bg-gray-500 text-white border-4 border-black transition-transform active:translate-y-1 active:translate-x-1 font-bold"
-              style={{ boxShadow: '4px 4px 0px #000' }}
+              className="btn-bloodyroyal btn-bloodyroyal-fold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               건너뛰기
             </button>

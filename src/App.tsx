@@ -34,7 +34,7 @@ export default function App() {
       <motion.div 
         animate={engine.damageEffect ? { x: [-10, 10, -10, 10, 0], y: [-10, 10, -10, 10, 0] } : {}}
         transition={{ duration: 0.4 }}
-        className="min-h-screen flex flex-col max-w-6xl mx-auto p-2 sm:p-4 relative overflow-hidden z-10"
+        className="h-screen flex flex-col max-w-6xl mx-auto p-2 sm:p-4 relative overflow-hidden z-10"
       >
       <AnimatePresence>
         {engine.roundResultText && (
@@ -69,13 +69,11 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <header className="flex justify-end items-center mb-1 border-b border-gray-700 pb-1">
-        {engine.gameState.phase !== 'MENU' && (
-          <div className="flex gap-4 text-xs sm:text-sm">
-            <div className="text-yellow-600">판 뒤엎기: {engine.gameState.reviveCount}</div>
-          </div>
-        )}
-      </header>
+      {engine.gameState.phase !== 'MENU' && (
+        <div className="fixed top-2 right-4 z-50 text-xs sm:text-sm text-yellow-600 bg-black/70 px-2 py-1 border border-yellow-600/30">
+          판 뒤엎기: {engine.gameState.reviveCount}
+        </div>
+      )}
 
       {engine.gameState.phase === 'MENU' && (
         <Menu onStart={engine.startGame} onViewLeaderboard={engine.loadScoreboard} />

@@ -84,14 +84,14 @@ export const HandProbability: React.FC<HandProbabilityProps> = ({ playerHand, co
       <div className="space-y-2">
         {probabilities.map((item) => (
           <div key={item.name} className="flex flex-col gap-1 group relative">
-            <div className="flex justify-between text-[10px] px-1 cursor-help">
+            <div className="flex justify-between text-[16px] px-1 cursor-help">
               <span className={item.prob > 0 ? 'text-gray-200' : 'text-gray-600'}>{item.label}</span>
               <span className={item.prob > 50 ? 'text-green-400 font-bold' : item.prob > 20 ? 'text-yellow-500' : 'text-gray-500'}>
                 {item.prob.toFixed(1)}%
               </span>
             </div>
             {/* Tooltip */}
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-max px-2 py-1 bg-gray-800 border border-gray-600 rounded text-[10px] text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-max px-2 py-1 bg-gray-800 border border-gray-600 rounded text-[16px] text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
               {HAND_DESCRIPTIONS[item.name]}
             </div>
             <div className="w-full bg-gray-900 h-1.5 rounded-full overflow-hidden border border-gray-800">
@@ -108,7 +108,7 @@ export const HandProbability: React.FC<HandProbabilityProps> = ({ playerHand, co
         ))}
       </div>
 
-      <div className="mt-3 text-[9px] text-gray-500 italic leading-tight">
+      <div className="mt-3 text-[14px] text-gray-500 italic leading-tight">
         * 현재 알 수 없는 카드들을 바탕으로 시뮬레이션한 확률입니다.
       </div>
     </div>

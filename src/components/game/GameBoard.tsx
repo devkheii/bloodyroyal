@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameState, AlphaCard, getAlphaCardUsageRuleByLevel } from '../../lib/game';
 import { Card, getBestHandCards, formatCard, HAND_NAMES_KO, evaluateHand } from '../../lib/poker';
@@ -6,6 +6,14 @@ import { PlayingCard } from '../PlayingCard';
 import { AlphaCardUI } from '../AlphaCardUI';
 import { HandProbability } from './HandProbability';
 import { getEnemyForStage } from '../../lib/enemies';
+
+const gameBoardObjects = import.meta.glob('../../images/game_board_object_*.png', { eager: true, import: 'default' }) as Record<string, string>;
+const gameBoardObjectList = Object.entries(gameBoardObjects)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([path, src]) => {
+    const match = path.match(/object_(\d+)\./);
+    return { src, item: match ? `item${match[1]}` : 'item01' };
+  });
 
 interface GameBoardProps {
   gameState: GameState;
@@ -34,6 +42,27 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onUseAlphaCard,
   onHandCardClick,
 }) => {
+  const [showProbability, setShowProbability] = useState(true);
+  const gameBoardRef = useRef<HTMLDivElement>(null);
+  const [boardRect, setBoardRect] = useState({ right: 0, top: 0, height: 0 });
+
+  useEffect(() => {
+    const update = () => {
+      if (gameBoardRef.current) {
+        const rect = gameBoardRef.current.getBoundingClientRect();
+        setBoardRect({ right: rect.right, top: rect.top, height: rect.height });
+      }
+    };
+    update();
+    window.addEventListener('resize', update);
+    const observer = new ResizeObserver(update);
+    if (gameBoardRef.current) observer.observe(gameBoardRef.current);
+    return () => {
+      window.removeEventListener('resize', update);
+      observer.disconnect();
+    };
+  }, []);
+
   const isEarlyStage = gameState.stage <= 10;
   const enemy = getEnemyForStage(gameState.stage);
   let bestHandCards: string[] = [];
@@ -69,9 +98,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   ];
 
   return (
-    <div className="flex-grow flex flex-col lg:flex-row gap-4 w-full max-w-6xl mx-auto">
+    <div className="flex-grow flex flex-col items-center w-full max-w-6xl mx-auto game-board-scale">
       {/* Main Game Area */}
-      <div className="flex-grow flex flex-col justify-between bg-blue-950 p-4 border-4 border-white relative z-10" style={{ boxShadow: '8px 8px 0px #000' }}>
+      <div ref={gameBoardRef} className="game-board w-full h-[800px] flex flex-col justify-between p-5 border-4 relative z-10 max-w-[800px]">
+        {gameBoardObjectList.map((obj, i) => (
+          <div key={i} className={`game-board-object ${obj.item}`}><img src={obj.src} alt="" /></div>
+        ))}
+
+
         {/* Opponent Area */}
       <div className="flex flex-col items-center space-y-2 relative">
         {/* Enemy Avatar & Dialogue */}
@@ -101,8 +135,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         <div className="flex justify-between w-full px-4 pt-16 sm:pt-20">
           <div className="text-red-400 ml-auto font-bold text-[10px] sm:text-xs">상대 체력: {gameState.opponentHp}/{gameState.maxOpponentHp}</div>
         </div>
-        <div className="w-full bg-gray-900 h-4 border-4 border-black mx-4 relative overflow-hidden" style={{ boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.5)' }}>
-          <div className="bg-red-500 h-full transition-all" style={{ width: `${(gameState.opponentHp / gameState.maxOpponentHp) * 100}%` }}></div>
+        <div className="hp-gauge hp-gauge-red w-full mx-4">
+          <div className="hp-fill" style={{ width: `${(gameState.opponentHp / gameState.maxOpponentHp) * 100}%` }}></div>
         </div>
         <div className="flex gap-2 mt-2">
           {gameState.opponentHand.map((card, i) => (
@@ -161,8 +195,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           ))}
           
           {(isEarlyStage || gameState.phase === 'SHOWDOWN') && currentHandName && (
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
-              <div className="bg-yellow-500 text-black px-3 py-1 border-4 border-black text-xs font-bold" style={{ boxShadow: '4px 4px 0px #000' }}>
+            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 z-20">
+              <div className="bg-yellow-500 text-black px-3 py-1 border-4 border-black text-xs font-bold whitespace-nowrap" style={{ boxShadow: '4px 4px 0px #000' }}>
                 내 현재 족보: {currentHandName}
               </div>
             </div>
@@ -176,8 +210,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           <div className="text-green-400 text-[10px] sm:text-xs">내 체력: {gameState.playerHp}/{gameState.maxPlayerHp}</div>
           <div className="text-blue-400 text-[10px] sm:text-xs">지불한 체력: {gameState.playerInvested}</div>
         </div>
-        <div className="w-full bg-gray-900 h-4 border-4 border-black mx-4 relative overflow-hidden" style={{ boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.5)' }}>
-          <div className="bg-green-500 h-full transition-all" style={{ width: `${(gameState.playerHp / gameState.maxPlayerHp) * 100}%` }}></div>
+        <div className="hp-gauge hp-gauge-green w-full mx-4">
+          <div className="hp-fill" style={{ width: `${(gameState.playerHp / gameState.maxPlayerHp) * 100}%` }}></div>
         </div>
         
         <div className="flex flex-col items-center gap-2 w-full mt-4">
@@ -237,70 +271,80 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             ))}
           </div>
 
-          {/* Controls */}
-          {['PREFLOP', 'FLOP', 'TURN', 'RIVER'].includes(gameState.phase) && (
-            <div className="flex flex-col gap-2 items-center w-full justify-center flex-wrap pt-4">
-              <div className="flex gap-2 items-center w-full justify-center flex-wrap">
-              {gameState.playerHp > 0 ? (
-                <>
-                  <button 
-                    onClick={() => onPlayerAction('FOLD')}
-                    disabled={isRoundEnding || !!activeAlphaCard}
-                    className="px-4 py-2 bg-gray-500 hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed border-4 border-black font-bold active:translate-y-1 active:translate-x-1"
-                    style={{ boxShadow: '4px 4px 0px #000' }}
-                  >
-                    FOLD
-                  </button>
-                  <button 
-                    onClick={() => onPlayerAction('CALL')}
-                    disabled={isRoundEnding || !!activeAlphaCard}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed border-4 border-black font-bold active:translate-y-1 active:translate-x-1 text-white"
-                    style={{ boxShadow: '4px 4px 0px #000' }}
-                  >
-                    {gameState.callAmount > 0 ? `CALL(${Math.min(gameState.playerHp, gameState.callAmount)})` : 'CHECK'}
-                  </button>
-                  <button 
-                    onClick={() => onPlayerAction('RAISE')}
-                    disabled={isRoundEnding || !!activeAlphaCard}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed border-4 border-black font-bold active:translate-y-1 active:translate-x-1 text-white"
-                    style={{ boxShadow: '4px 4px 0px #000' }}
-                  >
-                    RAISE(+10)
-                  </button>
-                  <button 
-                    onClick={() => onPlayerAction('ALL_IN')}
-                    disabled={isRoundEnding || !!activeAlphaCard}
-                    className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed border-4 border-black font-bold text-black active:translate-y-1 active:translate-x-1"
-                    style={{ boxShadow: '4px 4px 0px #000' }}
-                  >
-                    ALL-IN
-                  </button>
-                </>
-              ) : (
-                <button 
-                  onClick={() => onPlayerAction('ALL_IN')}
-                  disabled={isRoundEnding || !!activeAlphaCard}
-                  className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed border-4 border-black font-bold text-black active:translate-y-1 active:translate-x-1"
-                  style={{ boxShadow: '4px 4px 0px #000' }}
-                >
-                  ALL-IN
-                </button>
-              )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
 
-      {/* Sidebar / Hand Probability */}
-      <div className="lg:w-64 flex flex-col gap-2">
-        <HandProbability 
-          playerHand={gameState.playerHand}
-          communityCards={gameState.communityCards}
-          unknownCards={unknownCards}
-        />
-      </div>
+      {/* Controls - Below Game Board */}
+      {['PREFLOP', 'FLOP', 'TURN', 'RIVER'].includes(gameState.phase) && (
+        <div className="flex gap-2 items-center pt-3 max-w-[800px] w-full">
+          {gameState.playerHp > 0 ? (
+            <>
+              <button
+                onClick={() => onPlayerAction('FOLD')}
+                disabled={isRoundEnding || !!activeAlphaCard}
+                className="btn-bloodyroyal btn-bloodyroyal-fold disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+              >
+                FOLD
+              </button>
+              <button
+                onClick={() => onPlayerAction('CALL')}
+                disabled={isRoundEnding || !!activeAlphaCard}
+                className="btn-bloodyroyal btn-bloodyroyal-call disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+              >
+                {gameState.callAmount > 0 ? `CALL(${Math.min(gameState.playerHp, gameState.callAmount)})` : 'CHECK'}
+              </button>
+              <button
+                onClick={() => onPlayerAction('RAISE')}
+                disabled={isRoundEnding || !!activeAlphaCard}
+                className="btn-bloodyroyal btn-bloodyroyal-raise disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+              >
+                RAISE(+10)
+              </button>
+              <button
+                onClick={() => onPlayerAction('ALL_IN')}
+                disabled={isRoundEnding || !!activeAlphaCard}
+                className="btn-bloodyroyal btn-bloodyroyal-allin disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+              >
+                ALL-IN
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => onPlayerAction('ALL_IN')}
+              disabled={isRoundEnding || !!activeAlphaCard}
+              className="btn-bloodyroyal btn-bloodyroyal-allin disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+            >
+              ALL-IN
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Sidebar / Hand Probability - Fixed Position */}
+      {boardRect.right > 0 && (
+        <div
+          className="fixed z-40 flex"
+          style={{ left: `${boardRect.right}px`, top: `${boardRect.top}px`, height: `${boardRect.height}px` }}
+        >
+          {showProbability && (
+            <div className="w-56 lg:w-64 overflow-y-auto self-start mt-2">
+              <HandProbability
+                playerHand={gameState.playerHand}
+                communityCards={gameState.communityCards}
+                unknownCards={unknownCards}
+              />
+            </div>
+          )}
+          <button
+            onClick={() => setShowProbability(!showProbability)}
+            className="p-3 bg-black/80 border border-gray-600 text-yellow-500 text-xs flex items-center justify-center hover:bg-black/90 shrink-0 self-start mt-2"
+            title="족보 확률 토글"
+          >
+            {showProbability ? '접기' : '족보 펼치기'}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

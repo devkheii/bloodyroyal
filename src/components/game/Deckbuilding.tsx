@@ -49,7 +49,7 @@ export const Deckbuilding: React.FC<DeckbuildingProps> = ({
   }, [gameState.inventoryAlphaCards, cardFilter, cardSort]);
 
   return (
-    <div className="flex-grow flex flex-col space-y-6">
+    <div className="flex-grow flex flex-col space-y-6 justify-center">
       <h2 className="text-xl text-center text-yellow-600">덱 및 아이템 구성</h2>
       <p className="text-center text-xs text-gray-400">
         이번 스테이지에 사용할 조커를 최대 {getMaxEquipSlots(gameState.stage)}장 장착하세요.

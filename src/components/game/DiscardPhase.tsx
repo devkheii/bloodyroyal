@@ -44,15 +44,15 @@ export const DiscardPhase: React.FC<DiscardPhaseProps> = ({ gameState, onConfirm
             <motion.div
               key={index}
               onClick={() => toggleSelection(index)}
-              className={`w-28 h-40 border-4 flex flex-col items-center justify-center bg-white cursor-pointer relative transition-all ${
+              className={`card-front w-28 h-40 border-4 flex flex-col items-center justify-center cursor-pointer relative transition-all ${
                 isSelected ? 'border-red-500 opacity-50 translate-y-2' : 'border-black'
               }`}
               style={{ boxShadow: isSelected ? 'none' : '4px 4px 0px #000' }}
             >
-              <div className={`text-4xl ${isRed ? 'text-red-600' : 'text-black'}`}>
+              <div className={`text-4xl ${isRed ? 'text-red-800' : 'text-black'}`}>
                 {card.rank === 'T' ? '10' : card.rank}
               </div>
-              <div className={`text-4xl ${isRed ? 'text-red-600' : 'text-black'}`}>
+              <div className={`text-4xl ${isRed ? 'text-red-800' : 'text-black'}`}>
                 {suitSymbol}
               </div>
               {isSelected && (
